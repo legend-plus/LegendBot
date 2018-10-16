@@ -1,0 +1,15 @@
+{
+  "token": "<YOUR TOKEN HERE>",
+  "world_map": "aworld.bmp",
+  "bump_map": "bworld.bmp",
+  "prefix":"+",
+  "screen_width": 12,
+  "screen_height": 7,
+  "chat_radius": 12,
+  "chat_buffer": 4,
+  "default_user": {
+    "pos_x": 8,
+    "pos_y": 6
+  },
+  "arrows": ["⬅","⬆","⬇","➡"]
+}
