@@ -96,7 +96,7 @@ class LegendBot:
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
         self.portals = portals
-        self.world = World(self.world_map, self.bump_map, self.portals)
+        self.world = World(self.world_map, self.bump_map, self.portals, {})
         self.games = {} # type: Dict[str, LegendGame]
         self.mongo = MongoClient()
         self.legend_db = self.mongo.legend
