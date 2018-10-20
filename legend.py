@@ -143,7 +143,7 @@ class LegendBot:
     @commands.command()
     async def game(self, ctx):
         if ctx.author.id in self.games:
-            self.games[ctx.author.id].disconnect()
+            await self.games[ctx.author.id].disconnect()
             self.games.pop(ctx.author.id)
         self.games[ctx.author.id] = LegendGame(ctx, self.config, self.users, self.world, self.games, self.bot)
         await self.games[ctx.author.id].start()
