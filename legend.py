@@ -1,4 +1,6 @@
 import asyncio
+from typing import Dict, Any
+
 from discord.ext import commands
 import discord
 import json
@@ -13,16 +15,8 @@ from PIL import Image
 with open("config.json") as f:
     config = json.load(f)
 
-with open("portals.json") as f:
-    portal_json = json.load(f)
-
-portals = {}
-
-for portal in portal_json:
-    portals[(portal["pos_x"], portal["pos_y"])] = portal
-
-bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
-                   activity=discord.Game(name='Legend | +help'))
+legend_bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
+                          activity=discord.Game(name='Legend | +help'))
 
 # Bump Position ID for speeds
 bump_colors = {}
@@ -67,7 +61,10 @@ colors[(138, 111, 48)] = 31
 
 
 class LegendBot:
+
     def __init__(self, bot):
+        self.games: Dict[str, LegendGame]
+
         global config
         global portals
         self.config = config
@@ -121,6 +118,15 @@ class LegendBot:
             # world[y][x]
             self.bump_map.append(line)
 
+        print("Loading portals")
+        with open(self.config["portal_file"]) as f:
+            portal_json = json.load(f)
+
+        portals = {}
+
+        for portal in portal_json:
+            portals[(portal["pos_x"], portal["pos_y"])] = portal
+
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
@@ -149,21 +155,21 @@ class LegendBot:
 
     @commands.command()
     async def say(self, ctx, *, msg):
-        if ctx.author.id in self.games:
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
             await self.chat(ctx, msg, self.games[ctx.author.id])
         else:
             await ctx.send("You can only use this command ingame!")
 
     @commands.command()
     async def s(self, ctx, *, msg):
-        if ctx.author.id in self.games:
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
             await self.chat(ctx, msg, self.games[ctx.author.id])
         else:
             await ctx.send("You can only use this command ingame!")
 
     @commands.command()
     async def tp(self, ctx, x: int, y: int):
-        if ctx.author.id in self.games:
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
             self.games[ctx.author.id].move(x, y, force=True)
         else:
             await ctx.send("You can only use this command ingame!")
@@ -187,13 +193,13 @@ class LegendBot:
                 self.games[g].add_msg(ChatMessage(ctx.author.name, ctx.author.discriminator, msg))
 
 
-bot.remove_command("help")
-bot.add_cog(LegendBot(bot))
+legend_bot.remove_command("help")
+legend_bot.add_cog(LegendBot(legend_bot))
 
 
-@bot.event
+@legend_bot.event
 async def on_ready():
-    print('Logged in as:\n{0} (ID: {0.id})'.format(bot.user))
+    print('Logged in as:\n{0} (ID: {0.id})'.format(legend_bot.user))
 
 
-bot.run(config["token"])
+legend_bot.run(config["token"])

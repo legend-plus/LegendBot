@@ -118,6 +118,7 @@ sprites = {
 class LegendGame:
     def __init__(self, ctx, config, users, world, games, bot):
         self.ready = False
+        self.running = False
         self.error = ""
         if isinstance(ctx.channel, discord.DMChannel):
             self.error = "This command cannot be ran from DMs!"
@@ -197,7 +198,7 @@ class LegendGame:
         return render[1:]
 
     def move(self, x: int, y: int, force: bool = False) -> bool:
-        if self.world.height > y >= 0 and self.world.width > x >= 0:
+        if self.running and self.world.height > y >= 0 and self.world.width > x >= 0:
             if force or not self.world.collide(x, y):
                 if self.world.get_portal(x, y):
                     destination_portal = self.world.get_portal(x, y)
@@ -227,18 +228,20 @@ class LegendGame:
     async def start(self):
         if not self.ready and self.error:
             self.ctx.send(self.error)
-        view = self.get_view(self.data["pos_x"], self.data["pos_y"])
-        render = self.render_view(view)
-        embed = embeds.Embed(
-            color=10038562,
-            title="Legend",
-            url="https://discordapp.com",
-            description=render
-        )
-        self.msg = await self.ctx.send(embed=embed)
-        for arrow in self.config["arrows"]:
-            await self.msg.add_reaction(arrow)
-        self.game_task = asyncio.ensure_future(self.loop())
+        if not self.running:
+            self.running = True
+            view = self.get_view(self.data["pos_x"], self.data["pos_y"])
+            render = self.render_view(view)
+            embed = embeds.Embed(
+                color=10038562,
+                title="Legend",
+                url="https://discordapp.com",
+                description=render
+            )
+            self.msg = await self.ctx.send(embed=embed)
+            for arrow in self.config["arrows"]:
+                await self.msg.add_reaction(arrow)
+            self.game_task = asyncio.ensure_future(self.loop())
 
     async def loop(self):
         timeout = 0
@@ -304,10 +307,14 @@ class LegendGame:
                         await self.msg.edit(embed=embed)
 
     async def disconnect(self, reason=None):
-        self.game_task.cancel()
-        self.users.update_one({"user": str(self.author.id)}, {"$set": self.data})
-        if not reason:
-            await self.msg.edit(content="❌ Disconnected", embed=None)
+        if self.running:
+            self.users.update_one({"user": str(self.author.id)}, {"$set": self.data})
+            if not reason:
+                await self.msg.edit(content="❌ Disconnected", embed=None)
+            else:
+                await self.msg.edit(content="❌ Disconnected for " + reason, embed=None)
+            self.running = False
+            self.game_task.cancel()
+            return self.author
         else:
-            await self.msg.edit(content="❌ Disconnected for " + reason, embed=None)
-        return self.author
+            return False

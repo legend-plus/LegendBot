@@ -2,6 +2,7 @@
   "token": "<YOUR TOKEN HERE>",
   "world_map": "aworld.bmp",
   "bump_map": "bworld.bmp",
+  "portals": "default_portals.json",
   "prefix":"+",
   "screen_width": 12,
   "screen_height": 7,
