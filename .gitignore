@@ -1,2 +1,6 @@
+#IDE folders
 venv/
 .idea/
+#Secret Config Files
+config.json
+portals.json

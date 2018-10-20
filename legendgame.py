@@ -199,8 +199,13 @@ class LegendGame:
     def move(self, x: int, y: int, force: bool = False) -> bool:
         if self.world.height > y >= 0 and self.world.width > x >= 0:
             if force or not self.world.collide(x, y):
-                self.data["pos_x"] = x
-                self.data["pos_y"] = y
+                if self.world.get_portal(x, y):
+                    destination_portal = self.world.get_portal(x, y)
+                    self.data["pos_x"] = destination_portal["to_x"]
+                    self.data["pos_y"] = destination_portal["to_y"]
+                else:
+                    self.data["pos_x"] = x
+                    self.data["pos_y"] = y
                 return True
             else:
                 return False

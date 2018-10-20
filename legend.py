@@ -16,6 +16,10 @@ with open("config.json") as f:
 with open("portals.json") as f:
     portal_json = json.load(f)
 
+portals = {}
+
+for portal in portal_json:
+    portals[(portal["pos_x"], portal["pos_y"])] = portal
 
 bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
                    activity=discord.Game(name='Legend | +help'))
@@ -65,7 +69,9 @@ colors[(138, 111, 48)] = 31
 class LegendBot:
     def __init__(self, bot):
         global config
+        global portals
         self.config = config
+        self.portals = portals
         self.bot = bot
         # Open the img in the world argument
         im = Image.open(self.config["world_map"])
@@ -118,7 +124,7 @@ class LegendBot:
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
-        self.world = World(self.world_map, self.bump_map)
+        self.world = World(self.world_map, self.bump_map, self.portals)
         self.games = {}
 
         self.mongo = MongoClient()
