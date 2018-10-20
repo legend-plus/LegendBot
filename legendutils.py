@@ -1,7 +1,6 @@
 from datetime import datetime
 import uuid
 from typing import List, Dict
-from entities import Entity
 
 
 class ChatMessage:
@@ -38,7 +37,7 @@ class World:
         self.world = world
         self.bump_map = bump_map
         self.portals = portals
-        self.entities = entities  # type: Dict[(int, int), Entity]
+        self.entities = entities  # type: Dict[(int, int), entities.Entity]
 
     def get(self, min_x: int, max_x: int, min_y: int, max_y: int):
         return self.world[min_y:max_y, min_x:max_x]
