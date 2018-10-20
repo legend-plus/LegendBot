@@ -13,6 +13,10 @@ from PIL import Image
 with open("config.json") as f:
     config = json.load(f)
 
+with open("portals.json") as f:
+    portal_json = json.load(f)
+
+
 bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
                    activity=discord.Game(name='Legend | +help'))
 
@@ -154,8 +158,7 @@ class LegendBot:
     @commands.command()
     async def tp(self, ctx, x: int, y: int):
         if ctx.author.id in self.games:
-            self.games[ctx.author.id].data["pos_x"] = x
-            self.games[ctx.author.id].data["pos_y"] = y
+            self.games[ctx.author.id].move(x, y, force=True)
         else:
             await ctx.send("You can only use this command ingame!")
 

@@ -141,7 +141,7 @@ class LegendGame:
         self.msg = None
         self.game_task = None
 
-    def get_view(self, pos_x, pos_y):
+    def get_view(self, pos_x: int, pos_y: int):
         # Amount of height above, and below x respectively
         height_up = ceil(self.config["screen_height"] / 2)
         height_down = floor(self.config["screen_height"] / 2)
@@ -174,7 +174,7 @@ class LegendGame:
         world_section = self.world.get(min_x, max_x, min_y, max_y)
         return View(world_section, min_x, max_x, min_y, max_y)
 
-    def render_view(self, view):
+    def render_view(self, view: View):
         positions = {}
         for i in self.games:
             g = self.games[i]
@@ -196,14 +196,25 @@ class LegendGame:
                     render += "<" + emoji_name + color_emoji[view.view[vy][vx]] + ">"
         return render[1:]
 
-    def check(self, reaction, user):
+    def move(self, x: int, y: int, force: bool = False) -> bool:
+        if self.world.height > y >= 0 and self.world.width > x >= 0:
+            if force or not self.world.collide(x, y):
+                self.data["pos_x"] = x
+                self.data["pos_y"] = y
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def check(self, reaction: discord.reaction, user: discord.user):
         if self.msg:
             return user == self.author and str(reaction.emoji) in self.config[
                 "arrows"] and reaction.message.id == self.msg.id
         else:
             return False
 
-    def add_msg(self, message):
+    def add_msg(self, message: str):
         self.chat_buffer.append(message)
         if len(self.chat_buffer) > self.config["chat_buffer"]:
             self.chat_buffer.pop(0)
@@ -233,23 +244,19 @@ class LegendGame:
                 emoji = reaction.emoji
                 if emoji == self.config["arrows"][0]:
                     # Left
-                    if not self.world.collide(self.data["pos_x"] - 1, self.data["pos_y"]):
-                        self.data["pos_x"] -= 1
+                    self.move(self.data["pos_x"] - 1, self.data["pos_y"])
                 elif emoji == self.config["arrows"][1]:
                     # Up
-                    if not self.world.collide(self.data["pos_x"], self.data["pos_y"] - 1):
-                        self.data["pos_y"] -= 1
+                    self.move(self.data["pos_x"], self.data["pos_y"] - 1)
                 elif emoji == self.config["arrows"][2]:
                     # Down
-                    if not self.world.collide(self.data["pos_x"], self.data["pos_y"] + 1):
-                        self.data["pos_y"] += 1
+                    self.move(self.data["pos_x"], self.data["pos_y"] + 1)
                 elif emoji == self.config["arrows"][3]:
                     # Right
-                    if not self.world.collide(self.data["pos_x"] + 1, self.data["pos_y"]):
-                        self.data["pos_x"] += 1
+                    self.move(self.data["pos_x"] + 1, self.data["pos_y"])
                 view = self.get_view(self.data["pos_x"], self.data["pos_y"])
                 render = self.render_view(view)
-                if render != self.previous_render or len(self.chat_buffer) > 0\
+                if render != self.previous_render or len(self.chat_buffer) > 0 \
                         and self.last_msg != self.chat_buffer[-1].message:
                     self.previous_render = render
                     if len(self.chat_buffer) > 0:
