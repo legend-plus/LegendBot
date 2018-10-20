@@ -63,12 +63,8 @@ colors[(138, 111, 48)] = 31
 class LegendBot:
 
     def __init__(self, bot):
-        self.games: Dict[str, LegendGame]
-
         global config
-        global portals
         self.config = config
-        self.portals = portals
         self.bot = bot
         # Open the img in the world argument
         im = Image.open(self.config["world_map"])
@@ -119,20 +115,19 @@ class LegendBot:
             self.bump_map.append(line)
 
         print("Loading portals")
-        with open(self.config["portal_file"]) as f:
+        with open(self.config["portals"]) as f:
             portal_json = json.load(f)
 
         portals = {}
 
         for portal in portal_json:
             portals[(portal["pos_x"], portal["pos_y"])] = portal
-
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
+        self.portals = portals
         self.world = World(self.world_map, self.bump_map, self.portals)
-        self.games = {}
-
+        self.games = {} # type: Dict[str, LegendGame]
         self.mongo = MongoClient()
         self.legend_db = self.mongo.legend
         self.users = self.legend_db.users
