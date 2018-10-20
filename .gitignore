@@ -4,3 +4,5 @@ venv/
 #Secret Config Files
 config.json
 portals.json
+entities.json
+dialogue.json

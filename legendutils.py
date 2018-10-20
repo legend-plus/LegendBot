@@ -1,5 +1,7 @@
 from datetime import datetime
 import uuid
+from typing import List, Dict
+from entities import Entity
 
 
 class ChatMessage:
@@ -30,12 +32,13 @@ class View:
 
 
 class World:
-    def __init__(self, world, bump_map, portals):
+    def __init__(self, world, bump_map, portals, entities):
         self.height = len(world)
         self.width = len(world[0])
         self.world = world
         self.bump_map = bump_map
         self.portals = portals
+        self.entities = entities  # type: Dict[(int, int), Entity]
 
     def get(self, min_x: int, max_x: int, min_y: int, max_y: int):
         return self.world[min_y:max_y, min_x:max_x]
@@ -51,3 +54,7 @@ class World:
             return self.portals[(pos_x, pos_y)]
         else:
             return False
+
+
+def to_hex(color_tuple: (int, int, int)) -> str:
+    return "#" + bytes(color_tuple).hex()

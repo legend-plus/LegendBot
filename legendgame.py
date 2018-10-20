@@ -2,124 +2,17 @@ import asyncio
 import discord
 from discord import embeds
 from legendutils import View
+from legendutils import ChatMessage
+from legendutils import World
 from math import ceil, floor
-
-emoji_name = ":_:"
-
-# List of emoji id's for the various colors
-color_emoji = []
-color_emoji.append("498946323060490271")  # Black
-color_emoji.append("498946323396165652")  # Valhalla
-color_emoji.append("498946323609812992")  # Loulou
-color_emoji.append("498946323559481345")  # Oiled Cedar
-color_emoji.append("498946323597230081")  # Rope
-color_emoji.append("498946323408486421")  # Tahiti Gold
-color_emoji.append("498946322984992779")  # Twine
-color_emoji.append("498946323664338955")  # Pancho
-color_emoji.append("498946323719127040")  # Golden Fizz
-color_emoji.append("498946323458949136")  # Atlantis
-color_emoji.append("498946323572326400")  # Christi
-color_emoji.append("498946323752681492")  # Elf Green
-color_emoji.append("498946323471400972")  # Dell
-color_emoji.append("498946323018678284")  # Verdigris
-color_emoji.append("498946323714801664")  # Opal
-color_emoji.append("498946323542704178")  # Deep Koamaru
-color_emoji.append("498946323387777024")  # Venice Blue
-color_emoji.append("498946323291176967")  # Royal Blue
-color_emoji.append("498946323458818098")  # Cornflower
-color_emoji.append("498946323156959233")  # Viking
-color_emoji.append("498946323446235158")  # Light Steel Blue
-color_emoji.append("498946323211354125")  # White
-color_emoji.append("498946323353960472")  # Heather
-color_emoji.append("498946323446366208")  # Topaz
-color_emoji.append("498946323324862465")  # Dim Gray
-color_emoji.append("498946323479789570")  # Smokey Ash
-color_emoji.append("498946323412811801")  # Clairvoyant
-color_emoji.append("498946323219873793")  # Brown
-color_emoji.append("498946323731709959")  # Mandy
-color_emoji.append("498946323672727572")  # Plum
-color_emoji.append("498946323731447828")  # Rain Forest
-color_emoji.append("498946323291176967")  # Stinger
-
-sprites = {
-    "sans": [
-        "<:_:499383523485155358>",
-        "<a:_:499385501367664677>",
-        "<:_:499383523677831168>",
-        "<:_:499383523715710976>",
-        "<a:_:499385501967450113>",
-        "<a:_:499385501720117248>",
-        "<a:_:499385501594419201>",
-        "<a:_:499384574984585265>",
-        "<:_:499383523619373056>",
-        "<:_:499383523191554075>",
-        "<:_:499383523749396491>",
-        "<:_:499383523648471040>",
-        "<:_:499383523543613440>",
-        "<a:_:499385501556670464>",
-        "<:_:499383523845603338>",
-        "<:_:499383523636019200>",
-        "<a:_:499385501569253424>",
-        "<a:_:499385501799940096>",
-        "<:_:499383523246080011>",
-        "<a:_:499432338485280788>",
-        "<:_:499383523627499520>",
-        "<a:_:499385501652877313>",
-        "<:_:499383523636150272>",
-        "<a:_:499385501418258433>",
-        "<:_:499383523392749569>",
-        "<a:_:499385501715791872>",
-        "<:_:499383523484893184>",
-        "<:_:499383523531292718>",
-        "<:_:499383523715710986>",
-        "<a:_:499385501636231189>",
-        "<a:_:499385501900341258>",
-        "<a:_:499385501468590091>",
-        "<a:_:499457501536976896>"
-    ],
-    "sanspc": [
-        "<a:_:499435126908780554>",
-        "<a:_:499435127315628033>",
-        "<a:_:499435126892265485>",
-        "<a:_:499435127211032576>",
-        "<a:_:499435127009705985>",
-        "<a:_:499435127374479360>",
-        "<a:_:499435127471079434>",
-        "<a:_:499435127282073600>",
-        "<a:_:499435126707453955>",
-        "<a:_:499435126829088793>",
-        "<a:_:499435126829219850>",
-        "<a:_:499435126648864780>",
-        "<a:_:499435126950854666>",
-        "<a:_:499436185933053972>",
-        "<a:_:499435127210770432>",
-        "<a:_:499435126707716097>",
-        "<a:_:499436185802768394>",
-        "<a:_:499435127013638145>",
-        "<a:_:499435126904848386>",
-        "<a:_:499435127584194576>",
-        "<a:_:499435127085072398>",
-        "<a:_:499435127441719297>",
-        "<a:_:499435126904717331>",
-        "<a:_:499435127441588224>",
-        "<a:_:499435126963437568>",
-        "<a:_:499435127185866754>",
-        "<a:_:499435126883614730>",
-        "<a:_:499435126841671681>",
-        "<a:_:499435127198187530>",
-        "<a:_:499435127152312331>",
-        "<a:_:499435127261233152>",
-        "<a:_:499435127085072401>",
-        "<a:_:499457501536976896>",
-    ]
-}
 
 
 class LegendGame:
-    def __init__(self, ctx, config, users, world, games, bot):
-        self.ready = False
-        self.running = False
-        self.error = ""
+
+    def __init__(self, ctx, config, users, world, games, bot, sprites):
+        self.ready = False  # type: bool
+        self.running = False  # type: bool
+        self.error = ""  # type: str
         if isinstance(ctx.channel, discord.DMChannel):
             self.error = "This command cannot be ran from DMs!"
             return
@@ -131,11 +24,12 @@ class LegendGame:
         self.config = config
         self.ctx = ctx
         self.users = users
-        self.world = world
+        self.world = world  # type: World
         self.bot = bot
+        self.sprites = sprites
         self.chat_buffer = []
         self.games = games
-        self.author = ctx.author
+        self.author = ctx.author  # type: discord.user
         self.data = user_data
         self.previous_render = ""
         self.last_msg = None
@@ -188,13 +82,13 @@ class LegendGame:
                 if (vx + view.min_x, vy + view.min_y) in positions:
                     if positions[(vx + view.min_x, vy + view.min_y)] == self.author:
                         if not self.world.collide(vx + view.min_x, vy + view.min_y):
-                            render += sprites["sanspc"][view.view[vy][vx]]
+                            render += self.sprites["character_one_pc"][view.view[vy][vx]]["emoji"]
                         else:
-                            render += sprites["sanspc"][32]
+                            render += self.sprites["character_one_pc"][32]["emoji"]
                     else:
-                        render += sprites["sans"][view.view[vy][vx]]
+                        render += self.sprites["character_one"][view.view[vy][vx]]["emoji"]
                 else:
-                    render += "<" + emoji_name + color_emoji[view.view[vy][vx]] + ">"
+                    render += self.sprites["tiles"][view.view[vy][vx]]["emoji"]
         return render[1:]
 
     def move(self, x: int, y: int, force: bool = False) -> bool:
@@ -220,7 +114,7 @@ class LegendGame:
         else:
             return False
 
-    def add_msg(self, message: str):
+    def add_msg(self, message: ChatMessage):
         self.chat_buffer.append(message)
         if len(self.chat_buffer) > self.config["chat_buffer"]:
             self.chat_buffer.pop(0)
