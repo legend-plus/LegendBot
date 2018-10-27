@@ -1,5 +1,5 @@
 from interactions import Dialogue
-from legendgame import LegendGame
+import legendgame
 
 
 class Entity:
@@ -18,5 +18,5 @@ class NPC(Entity):
         super().__init__(entity_type, pos_x, pos_y, tile, True)
         self.dialogue = dialogue  # type: Dialogue
 
-    def interact(self, game: LegendGame):
+    def interact(self, game: legendgame.LegendGame):
         self.dialogue.interact(game)

@@ -1,4 +1,6 @@
 import asyncio
+from typing import List
+
 import discord
 from discord import embeds
 from legendutils import View
@@ -12,7 +14,9 @@ class LegendGame:
     def __init__(self, ctx, config, users, world, games, bot, sprites):
         self.ready = False  # type: bool
         self.running = False  # type: bool
+        self.paused = False  # type: bool
         self.error = ""  # type: str
+        self.gui_options = [] # type: list
         if isinstance(ctx.channel, discord.DMChannel):
             self.error = "This command cannot be ran from DMs!"
             return
@@ -27,7 +31,10 @@ class LegendGame:
         self.world = world  # type: World
         self.bot = bot
         self.sprites = sprites
-        self.chat_buffer = []
+        self.chat_buffer = []  # type: List[ChatMessage]
+        self.dialogue_buffer = None  # type: DialogueMessage
+        self.last_dialogue = None  # type: DialogueMessage
+        self.gui_description = ""  # type: description
         self.games = games
         self.author = ctx.author  # type: discord.user
         self.data = user_data
@@ -91,6 +98,33 @@ class LegendGame:
                     render += self.sprites["tiles"][view.view[vy][vx]]["emoji"]
         return render[1:]
 
+    async def update_screen(self, render: str):
+        if render != self.previous_render or len(self.chat_buffer) > 0 \
+                and self.last_msg != self.chat_buffer[-1].message\
+                and self.dialogue_buffer != self.last_dialogue:
+            embed = embeds.Embed(
+                color=10038562,
+                title="Legend",
+                url="https://discordapp.com",
+                description=render
+            )
+
+            self.previous_render = render
+            if self.dialogue_buffer:
+                self.last_dialogue = self.dialogue_buffer
+                author_text = self.dialogue_buffer.sprite + self.dialogue_buffer.author
+                message = self.dialogue_buffer.text
+                embed.add_field(name=author_text, value=message, inline=False)
+
+            if len(self.chat_buffer) > 0:
+                self.last_msg = self.chat_buffer[-1]
+                for chat_msg in self.chat_buffer:
+                    s_time = chat_msg.time.strftime("%H:%M:%S")
+                    author_text = chat_msg.author + "#" + chat_msg.discriminator + " - " + s_time
+                    embed.add_field(name=author_text, value=chat_msg.message, inline=False)
+
+            await self.msg.edit(embed=embed)
+
     def move(self, x: int, y: int, force: bool = False) -> bool:
         if self.running and self.world.height > y >= 0 and self.world.width > x >= 0:
             if force or not self.world.collide(x, y):
@@ -103,6 +137,10 @@ class LegendGame:
                     self.data["pos_y"] = y
                 return True
             else:
+                if self.world.get_entity(x, y):
+                    entity = self.world.get_entity(x, y)
+                    if entity.interactable:
+                        entity.interact()
                 return False
         else:
             return False
@@ -146,34 +184,23 @@ class LegendGame:
                 emoji = reaction.emoji
                 if emoji == self.config["arrows"][0]:
                     # Left
-                    self.move(self.data["pos_x"] - 1, self.data["pos_y"])
+                    if not self.paused:
+                        self.move(self.data["pos_x"] - 1, self.data["pos_y"])
                 elif emoji == self.config["arrows"][1]:
                     # Up
-                    self.move(self.data["pos_x"], self.data["pos_y"] - 1)
+                    if not self.paused:
+                        self.move(self.data["pos_x"], self.data["pos_y"] - 1)
                 elif emoji == self.config["arrows"][2]:
                     # Down
-                    self.move(self.data["pos_x"], self.data["pos_y"] + 1)
+                    if not self.paused:
+                        self.move(self.data["pos_x"], self.data["pos_y"] + 1)
                 elif emoji == self.config["arrows"][3]:
                     # Right
-                    self.move(self.data["pos_x"] + 1, self.data["pos_y"])
+                    if not self.paused:
+                        self.move(self.data["pos_x"] + 1, self.data["pos_y"])
                 view = self.get_view(self.data["pos_x"], self.data["pos_y"])
                 render = self.render_view(view)
-                if render != self.previous_render or len(self.chat_buffer) > 0 \
-                        and self.last_msg != self.chat_buffer[-1].message:
-                    self.previous_render = render
-                    if len(self.chat_buffer) > 0:
-                        self.last_msg = self.chat_buffer[-1]
-                    embed = embeds.Embed(
-                        color=10038562,
-                        title="Legend",
-                        url="https://discordapp.com",
-                        description=render
-                    )
-                    for chat_msg in self.chat_buffer:
-                        s_time = chat_msg.time.strftime("%H:%M:%S")
-                        author_text = chat_msg.author + "#" + chat_msg.discriminator + " - " + s_time
-                        embed.add_field(name=author_text, value=chat_msg.message, inline=False)
-                    await self.msg.edit(embed=embed)
+                await self.update_screen(render)
                 await self.msg.remove_reaction(emoji, user)
             except asyncio.TimeoutError:
                 timeout += 2
@@ -183,22 +210,7 @@ class LegendGame:
                 else:
                     view = self.get_view(self.data["pos_x"], self.data["pos_y"])
                     render = self.render_view(view)
-                    if render != self.previous_render or len(self.chat_buffer) > 0 and self.last_msg != \
-                            self.chat_buffer[-1].message:
-                        self.previous_render = render
-                        if len(self.chat_buffer) > 0:
-                            self.last_msg = self.chat_buffer[-1]
-                        embed = embeds.Embed(
-                            color=10038562,
-                            title="Legend",
-                            url="https://discordapp.com",
-                            description=render
-                        )
-                        for chat_msg in self.chat_buffer:
-                            s_time = chat_msg.time.strftime("%H:%M:%S")
-                            author_text = chat_msg.author + "#" + chat_msg.discriminator + " - " + s_time
-                            embed.add_field(name=author_text, value=chat_msg.message, inline=False)
-                        await self.msg.edit(embed=embed)
+                    await self.update_screen(render)
 
     async def disconnect(self, reason=None):
         if self.running:
