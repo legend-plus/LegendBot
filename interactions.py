@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 from typing import List
 
-from legendgame import LegendGame
+import game
 
 
 class GuiResult(ABC):
@@ -23,21 +23,26 @@ class Interaction(ABC):
         pass
 
     @abstractmethod
-    def interact(self, game: LegendGame):
+    def interact(self, session: game.Game):
         pass
 
 
-class DialogueResult(GuiResult):
+class CloseGuiResult(GuiResult):
     def __init__(self):
         super().__init__()
-        pass
+
+
+class ContinueDialogueResult(GuiResult):
+    def __init__(self, dialogue_id: str):
+        super().__init__()
+        self.dialogue_id = dialogue_id
 
 
 class DialogueOption(GuiOption):
-    def __init__(self, text: str, result: DialogueResult):
+    def __init__(self, text: str, result: GuiResult):
         super().__init__(result)
-        self.text = text  # type: str
-        self.result = result  # type: DialogueResult
+        self.text: str = text
+        self.result: GuiResult = result
 
 
 class DialogueMessage:
@@ -53,17 +58,19 @@ class Dialogue(Interaction):
         self.text = text
         self.author = author
         self.options = options
+        self.sprite = sprite
 
-    def interact(self, game: LegendGame):
-        game.paused = True
-        game.gui_options = self.options
+    def interact(self, session: game.Game):
+        session.paused = True
+        session.gui_options = self.options
         gui_description = ""
 
-        for x in range(min(len(game.config["arrows"]), len(self.options))):
-            if x > 0:
-                gui_description += "\n"
-            gui_description += game.config["arrows"][x] + " " + self.options[x].text
+        if hasattr(session, "config") and "arrows" in session.config:
+            for x in range(min(len(session.config["arrows"]), len(self.options))):
+                if x > 0:
+                    gui_description += "\n"
+                gui_description += session.config["arrows"][x] + " " + self.options[x].text
 
-        game.gui_description = gui_description
-        game.dialogue_buffer = DialogueMessage(self.author, self.text, self.sprite)
+        session.gui_description = gui_description
+        session.dialogue_buffer = DialogueMessage(self.author, self.text, self.sprite)
         return True

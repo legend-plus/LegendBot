@@ -1,17 +1,19 @@
 from datetime import datetime
 import uuid
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 import entities
 import numpy as np
+
+from entities import Entity
 
 
 class ChatMessage:
     def __init__(self, author: str, discriminator: str, message: str):
-        self.author = author  # type: str
-        self.discriminator = discriminator  # type: str
-        self.message = message[0:140]  # type: str
-        self.time = datetime.utcnow()  # type: datetime
-        self.uuid = uuid.uuid4().hex  # type: uuid
+        self.author: str = author
+        self.discriminator: str = discriminator
+        self.message: str = message[0:140]
+        self.time: datetime = datetime.utcnow()
+        self.uuid: uuid = uuid.uuid4().hex
 
     def __eq__(self, other) -> bool:
         if isinstance(other, ChatMessage) and other.uuid == self.uuid:
@@ -25,21 +27,21 @@ class ChatMessage:
 
 class View:
     def __init__(self, view: np.ndarray, min_x: int, max_x: int, min_y: int, max_y: int):
-        self.view = view  # type: np.ndarray
-        self.min_x = min_x  # type: int
-        self.max_x = max_x  # type: int
-        self.min_y = min_y  # type: int
-        self.max_y = max_y  # type: int
+        self.view: np.ndarray = view
+        self.min_x: int = min_x
+        self.max_x: int = max_x
+        self.min_y: int = min_y
+        self.max_y: int = max_y
 
 
 class World:
-    def __init__(self, world: np.ndarray, bump_map: np.ndarray, portals, entities: Dict[(int, int), entities.Entity]):
-        self.height = len(world)  # type: int
-        self.width = len(world[0])  # type: int
-        self.world = world  # type: np.ndarray
-        self.bump_map = bump_map  # type: np.ndarray
-        self.portals = portals  # type: Dict[(int, int), List[int, int, int, int]]
-        self.entities = entities  # type: Dict[(int, int), entities.Entity]
+    def __init__(self, world: np.ndarray, bump_map: np.ndarray, portals, entities: Dict[Tuple[int, int], entities.Entity]):
+        self.height: int = len(world)
+        self.width: int = len(world[0])
+        self.world: np.ndarray = world
+        self.bump_map: np.ndarray = bump_map
+        self.portals: Dict[Tuple[int, int], Dict[str, int]] = portals
+        self.entities: Dict[Tuple[int, int], Entity] = entities
 
     def get(self, min_x: int, max_x: int, min_y: int, max_y: int) -> np.ndarray:
         return self.world[min_y:max_y, min_x:max_x]
@@ -48,7 +50,7 @@ class World:
         return self.bump_map[min_y:max_y, min_x:max_x]
 
     def collide(self, pos_x: int, pos_y: int) -> bool:
-        return not self.bump_map[pos_y, pos_x]
+        return not self.bump_map[pos_y, pos_x] or (pos_x, pos_y) in self.entities
 
     def get_entity(self, pos_x: int, pos_y: int) -> Optional[entities.Entity]:
         if (pos_x, pos_y) in self.entities:
@@ -56,7 +58,7 @@ class World:
         else:
             return None
 
-    def get_portal(self, pos_x: int, pos_y: int) -> Optional[List[int, int, int, int]]:
+    def get_portal(self, pos_x: int, pos_y: int) -> Optional[Dict[str, int]]:
         if (pos_x, pos_y) in self.portals:
             return self.portals[(pos_x, pos_y)]
         else:

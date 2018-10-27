@@ -4,8 +4,10 @@ from typing import Dict, Any
 from discord.ext import commands
 import discord
 import json
-
+import logging
 import legendutils
+from entities import NPC
+import interactions
 from legendgame import LegendGame
 from legendutils import World
 from legendutils import ChatMessage
@@ -19,6 +21,8 @@ with open("config.json") as f:
 
 legend_bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
                           activity=discord.Game(name='Legend | +help'))
+
+logging.basicConfig(level=logging.CRITICAL)
 
 # Bump Position ID for speeds
 bump_colors = {}
@@ -92,12 +96,43 @@ class LegendBot:
 
         for portal in portal_json:
             portals[(portal["pos_x"], portal["pos_y"])] = portal
+
+        print("Loading dialogue")
+        with open(self.config["dialogue"]) as f:
+            dialogue_json = json.load(f)
+
+        dialogues = {}
+
+        for dialogue_id in dialogue_json:
+            dialogue = dialogue_json[dialogue_id]
+            options = []
+            for opt in dialogue["options"]:
+                if opt["type"] == "end":
+                    result = interactions.CloseGuiResult()
+                elif opt["type"] == "dialogue":
+                    result = interactions.ContinueDialogueResult(opt["dialogue"])
+                options.append(interactions.DialogueOption(opt["text"], result))
+            dialogues[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"], dialogue["sprite"], options)
+
+        print("Loading entities")
+        with open(self.config["entities"]) as f:
+            entity_json = json.load(f)
+
+        entities = {}
+
+        for entity in entity_json:
+            if entity["type"] == "npc":
+                entities[(entity["pos_x"], entity["pos_y"])] = \
+                    NPC(entity["pos_x"], entity["pos_y"], entity["tile"], dialogues[entity["dialogue"]])
+
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
         self.portals = portals
-        self.world = World(self.world_map, self.bump_map, self.portals, {})
-        self.games = {} # type: Dict[str, LegendGame]
+        self.dialogue = dialogues
+        self.entities = entities
+        self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
+        self.games = {}  # type: Dict[str, LegendGame]
         self.mongo = MongoClient()
         self.legend_db = self.mongo.legend
         self.users = self.legend_db.users
@@ -115,7 +150,7 @@ class LegendBot:
         if ctx.author.id in self.games:
             await self.games[ctx.author.id].disconnect()
             self.games.pop(ctx.author.id)
-        self.games[ctx.author.id] = LegendGame(ctx, self.config, self.users, self.world, self.games, self.bot, self.sprites)
+        self.games[ctx.author.id] = LegendGame(ctx, self.config, self.users, self.world, self.games, self.bot, self.sprites, self.dialogue)
         await self.games[ctx.author.id].start()
 
     @commands.command()

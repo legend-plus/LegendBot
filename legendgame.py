@@ -1,22 +1,24 @@
 import asyncio
-from typing import List
+from typing import List, Dict
 
 import discord
 from discord import embeds
-from legendutils import View
-from legendutils import ChatMessage
-from legendutils import World
+
+from game import Game
+from interactions import GuiOption, DialogueMessage, CloseGuiResult, ContinueDialogueResult, Dialogue
+from legendutils import View, ChatMessage, World
 from math import ceil, floor
 
 
-class LegendGame:
+class LegendGame(Game):
 
-    def __init__(self, ctx, config, users, world, games, bot, sprites):
-        self.ready = False  # type: bool
-        self.running = False  # type: bool
-        self.paused = False  # type: bool
-        self.error = ""  # type: str
-        self.gui_options = [] # type: list
+    def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue):
+        super().__init__()
+        self.ready: bool = False
+        self.running: bool = False
+        self.paused: bool = False
+        self.error: str = ""
+        self.gui_options: List[GuiOption] = []
         if isinstance(ctx.channel, discord.DMChannel):
             self.error = "This command cannot be ran from DMs!"
             return
@@ -28,15 +30,16 @@ class LegendGame:
         self.config = config
         self.ctx = ctx
         self.users = users
-        self.world = world  # type: World
+        self.world: World = world
         self.bot = bot
         self.sprites = sprites
-        self.chat_buffer = []  # type: List[ChatMessage]
-        self.dialogue_buffer = None  # type: DialogueMessage
-        self.last_dialogue = None  # type: DialogueMessage
-        self.gui_description = ""  # type: description
+        self.dialogue: Dict[str, Dialogue] = dialogue
+        self.chat_buffer: List[ChatMessage] = []
+        self.dialogue_buffer: DialogueMessage = None
+        self.last_dialogue: DialogueMessage = None
+        self.gui_description: str = ""
         self.games = games
-        self.author = ctx.author  # type: discord.user
+        self.author: discord.user = ctx.author
         self.data = user_data
         self.previous_render = ""
         self.last_msg = None
@@ -86,22 +89,27 @@ class LegendGame:
         for vy in range(len(view.view)):
             render += "\n"
             for vx in range(len(view.view[vy])):
-                if (vx + view.min_x, vy + view.min_y) in positions:
-                    if positions[(vx + view.min_x, vy + view.min_y)] == self.author:
-                        if not self.world.collide(vx + view.min_x, vy + view.min_y):
+                abs_x = vx + view.min_x
+                abs_y = vy + view.min_y
+                if (abs_x, abs_y) in positions:
+                    if positions[(abs_x, abs_y)] == self.author:
+                        if not self.world.collide(abs_x, abs_y):
                             render += self.sprites["character_one_pc"][view.view[vy][vx]]["emoji"]
                         else:
                             render += self.sprites["character_one_pc"][32]["emoji"]
                     else:
                         render += self.sprites["character_one"][view.view[vy][vx]]["emoji"]
+                elif self.world.get_entity(abs_x, abs_y):
+                    entity = self.world.get_entity(abs_x, abs_y)
+                    render += self.sprites["entities"][entity.tile]
                 else:
                     render += self.sprites["tiles"][view.view[vy][vx]]["emoji"]
         return render[1:]
 
     async def update_screen(self, render: str):
-        if render != self.previous_render or len(self.chat_buffer) > 0 \
-                and self.last_msg != self.chat_buffer[-1].message\
-                and self.dialogue_buffer != self.last_dialogue:
+        if render != self.previous_render or (len(self.chat_buffer) > 0
+                                              and self.last_msg != self.chat_buffer[-1].message) \
+                or self.dialogue_buffer != self.last_dialogue:
             embed = embeds.Embed(
                 color=10038562,
                 title="Legend",
@@ -112,9 +120,10 @@ class LegendGame:
             self.previous_render = render
             if self.dialogue_buffer:
                 self.last_dialogue = self.dialogue_buffer
-                author_text = self.dialogue_buffer.sprite + self.dialogue_buffer.author
+                author_text = self.sprites["entities"][self.dialogue_buffer.sprite] + self.dialogue_buffer.author
                 message = self.dialogue_buffer.text
                 embed.add_field(name=author_text, value=message, inline=False)
+                embed.add_field(name="Choose", value=self.gui_description, inline=False)
 
             if len(self.chat_buffer) > 0:
                 self.last_msg = self.chat_buffer[-1]
@@ -140,19 +149,36 @@ class LegendGame:
                 if self.world.get_entity(x, y):
                     entity = self.world.get_entity(x, y)
                     if entity.interactable:
-                        entity.interact()
+                        entity.interact(self)
                 return False
         else:
             return False
 
-    def check(self, reaction: discord.reaction, user: discord.user):
+    def gui_interact(self, choice: int):
+        if self.gui_options and len(self.gui_options) > choice:
+            selected_choice = self.gui_options[choice]
+            selected_result = selected_choice.result
+            # TODO: Rewards
+            if isinstance(selected_result, CloseGuiResult):
+                self.paused = False
+                self.dialogue_buffer = None
+                self.gui_description = ""
+                self.gui_options = []
+            elif isinstance(selected_result, ContinueDialogueResult):
+                self.gui_options = []
+                self.gui_description = ""
+                self.dialogue_buffer = None
+                new_dialogue = self.dialogue[selected_result.dialogue_id]
+                new_dialogue.interact(self)
+
+    def check(self, reaction: discord.reaction, user: discord.user) -> bool:
         if self.msg:
-            return user == self.author and str(reaction.emoji) in self.config[
-                "arrows"] and reaction.message.id == self.msg.id
+            return user == self.author and str(reaction.emoji) in self.config["arrows"] \
+                   and reaction.message.id == self.msg.id
         else:
             return False
 
-    def add_msg(self, message: ChatMessage):
+    def add_msg(self, message: ChatMessage) -> None:
         self.chat_buffer.append(message)
         if len(self.chat_buffer) > self.config["chat_buffer"]:
             self.chat_buffer.pop(0)
@@ -186,18 +212,26 @@ class LegendGame:
                     # Left
                     if not self.paused:
                         self.move(self.data["pos_x"] - 1, self.data["pos_y"])
+                    else:
+                        self.gui_interact(0)
                 elif emoji == self.config["arrows"][1]:
                     # Up
                     if not self.paused:
                         self.move(self.data["pos_x"], self.data["pos_y"] - 1)
+                    else:
+                        self.gui_interact(1)
                 elif emoji == self.config["arrows"][2]:
                     # Down
                     if not self.paused:
                         self.move(self.data["pos_x"], self.data["pos_y"] + 1)
+                    else:
+                        self.gui_interact(2)
                 elif emoji == self.config["arrows"][3]:
                     # Right
                     if not self.paused:
                         self.move(self.data["pos_x"] + 1, self.data["pos_y"])
+                    else:
+                        self.gui_interact(3)
                 view = self.get_view(self.data["pos_x"], self.data["pos_y"])
                 render = self.render_view(view)
                 await self.update_screen(render)

@@ -1,0 +1,45 @@
+{
+  "jim_1": {
+    "author": "Jim",
+    "sprite": "jim_avatar",
+    "text": "Hey there kiddo! I'm Jim!",
+    "options": [
+      {
+        "text": "Go away",
+        "type": "dialogue",
+        "dialogue": "jim_go"
+      },
+      {
+        "text": "Hi Jim!",
+        "type": "dialogue",
+        "dialogue": "jim_hi"
+      },
+      {
+        "text": "[Run Away]",
+        "type": "end"
+      }
+    ]
+  },
+  "jim_go": {
+    "author": "Jim MAD",
+    "sprite": "jim_avatar",
+    "text": "If combat was implemented you would be dead right now.",
+    "options": [
+      {
+        "text": "Ok.",
+        "type": "end"
+      }
+    ]
+  },
+  "jim_hi": {
+    "author": "Jim",
+    "sprite": "jim_avatar",
+    "text": "Nice to meet you!",
+    "options": [
+      {
+        "text": "Cya later Jim!",
+        "type": "end"
+      }
+    ]
+  }
+}
