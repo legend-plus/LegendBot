@@ -24,7 +24,7 @@ from PIL import Image
 with open("config.json") as f:
     config = json.load(f)
 
-legend_bot = commands.Bot(command_prefix=config["prefix"], description="Legend RPG Bot",
+legend_bot = commands.Bot(command_prefix=commands.when_mentioned_or(config["prefix"]), description="Legend RPG Bot",
                           activity=discord.Game(name='Legend | +help'))
 
 logging.basicConfig(level=logging.CRITICAL)
