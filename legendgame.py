@@ -244,7 +244,7 @@ class LegendGame(Game):
                     self.move(self.data["pos_x"] + 1, self.data["pos_y"])
                 else:
                     self.gui_interact(3)
-            # await self.frame() #EXPERIMENTAL!!!
+            await self.optional_frame()
 
     async def disconnect(self, reason=None):
         if self.running:

@@ -64,6 +64,19 @@ class World:
         else:
             return None
 
+    def reload(self, world: np.ndarray = None,
+               bump_map: np.ndarray = None,
+               portals: Dict[Tuple[int, int], Dict[str, int]] = None,
+               entities: Dict[Tuple[int, int], entities.Entity] = None):
+        if world is not None:
+            self.world = world
+        if bump_map is not None:
+            self.bump_map = bump_map
+        if portals is not None:
+            self.portals = portals
+        if entities is not None:
+            self.entities = entities
+
 
 def to_hex(color_tuple: (int, int, int)) -> str:
     return "#" + bytes(color_tuple).hex()

@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 import threading
 from discord import Reaction, User, Client
 from discord.ext import commands
@@ -11,7 +11,7 @@ import logging
 from discord.ext.commands import Bot
 
 import legendutils
-from entities import NPC
+from entities import NPC, Entity
 import interactions
 from legendgame import LegendGame
 from legendutils import World
@@ -38,10 +38,38 @@ bump_colors[(255, 255, 255)] = 1
 class LegendBot:
 
     def __init__(self, bot: Bot):
-        global config
+        with open("config.json") as f:
+            self.config = json.load(f)
+
+        # Values from config
+        self.sprites = {}
+        self.width: int = None
+        self.height: int = None
+        self.bump_width: int = None
+        self.bump_height: int = None
+        self.w_screen: int = None
+        self.h_screen: int = None
+        self.chat_radius: int = None
+        self.max_buffer: int = None
+        self.world_map: numpy.ndarray = None
+        self.bump_map: numpy.ndarray = None
+        self.portals: Dict[Tuple[int, int], Dict[str, int]] = {}
+        self.entities: Dict[Tuple[int, int], Entity] = {}
+        self.dialogue: Dict[str, interactions.Dialogue] = {}
+        self.messages = {}
+
         self.config = config
         self.bot: Bot = bot
+        self.mongo = MongoClient()
+        self.legend_db = self.mongo.legend
+        self.users = self.legend_db.users
+        self.games: Dict[str, LegendGame] = {}
+        self.load_config()
+        self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
+        self.running = True
+        bot.loop.create_task(self.update())
 
+    def load_config(self):
         with open(self.config["sprites"]) as sprites_f:
             self.sprites = json.load(sprites_f)
 
@@ -59,7 +87,6 @@ class LegendBot:
         # World list
         self.world_map = []
         self.bump_map = []
-        self.messages = {}
 
         print("Loading " + self.config["world_map"] + " " + str(self.width) + " x " + str(self.height) + "\n")
 
@@ -97,16 +124,16 @@ class LegendBot:
         with open(self.config["portals"]) as f:
             portal_json = json.load(f)
 
-        portals = {}
+        self.portals.clear()
 
         for portal in portal_json:
-            portals[(portal["pos_x"], portal["pos_y"])] = portal
+            self.portals[(portal["pos_x"], portal["pos_y"])] = portal
 
         print("Loading dialogue")
         with open(self.config["dialogue"]) as f:
             dialogue_json = json.load(f)
 
-        dialogues = {}
+        self.dialogue.clear()
 
         for dialogue_id in dialogue_json:
             dialogue = dialogue_json[dialogue_id]
@@ -116,33 +143,31 @@ class LegendBot:
                     result = interactions.CloseGuiResult()
                 elif opt["type"] == "dialogue":
                     result = interactions.ContinueDialogueResult(opt["dialogue"])
+                else:
+                    result = interactions.CloseGuiResult()
                 options.append(interactions.DialogueOption(opt["text"], result))
-            dialogues[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"], dialogue["sprite"], options)
+            self.dialogue[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"], dialogue["sprite"], options)
 
         print("Loading entities")
         with open(self.config["entities"]) as f:
             entity_json = json.load(f)
 
-        entities = {}
+        self.entities.clear()
 
         for entity in entity_json:
             if entity["type"] == "npc":
-                entities[(entity["pos_x"], entity["pos_y"])] = \
-                    NPC(entity["pos_x"], entity["pos_y"], entity["tile"], dialogues[entity["dialogue"]])
+                self.entities[(entity["pos_x"], entity["pos_y"])] = \
+                    NPC(entity["pos_x"], entity["pos_y"], entity["tile"], self.dialogue[entity["dialogue"]])
 
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
-        self.portals = portals
-        self.dialogue = dialogues
-        self.entities = entities
-        self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
-        self.games = {}  # type: Dict[str, LegendGame]
-        self.mongo = MongoClient()
-        self.legend_db = self.mongo.legend
-        self.users = self.legend_db.users
-        self.running = True
-        bot.loop.create_task(self.update())
+
+    def reload_config(self):
+        with open("config.json") as f:
+            self.config = json.load(f)
+        self.load_config()
+        self.world.reload(self.world_map, self.bump_map, self.portals, self.entities)
 
     @commands.command()
     async def ping(self, ctx):
@@ -191,6 +216,15 @@ class LegendBot:
             print("Exiting")
             self.running = False
             await self.bot.close()
+        else:
+            await ctx.send("You do not have permissions!")
+
+    @commands.command()
+    async def reload(self, ctx):
+        user_data = self.users.find_one({"user": str(ctx.author.id)})
+        if user_data and "admin" in user_data and user_data["admin"]:
+            self.reload_config()
+            await ctx.send("Config reloaded.")
         else:
             await ctx.send("You do not have permissions!")
 
