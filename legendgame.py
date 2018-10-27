@@ -198,7 +198,6 @@ class LegendGame(Game):
         if not self.ready and self.error:
             self.ctx.send(self.error)
         if not self.running:
-            self.running = True
             view = self.get_view(self.data["pos_x"], self.data["pos_y"])
             render = self.render_view(view)
             embed = embeds.Embed(
@@ -210,6 +209,7 @@ class LegendGame(Game):
             self.msg = await self.ctx.send(embed=embed)
             for arrow in self.config["arrows"]:
                 await self.msg.add_reaction(arrow)
+            self.running = True
 
     async def react(self, reaction):
         if self.running:
@@ -239,7 +239,7 @@ class LegendGame(Game):
                     self.move(self.data["pos_x"] + 1, self.data["pos_y"])
                 else:
                     self.gui_interact(3)
-            await self.frame()
+            # await self.frame() #EXPERIMENTAL!!!
 
     async def disconnect(self, reason=None):
         if self.running:

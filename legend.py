@@ -216,9 +216,10 @@ class LegendBot:
         while self.running:
             timing = modf(time.time() / self.config["frequency"])
             if floor(timing[0] * 10) != offset:
+                # print("From " + str(offset) + " to " + str(floor(timing[0] * 10)) + " @ " + str(timing[1]))
                 offset = floor(timing[0] * 10)
                 for user_id in self.games:
-                    if self.games[user_id].offset == offset:
+                    if self.games[user_id].offset == offset and self.games[user_id].running:
                         session = self.games[user_id]
                         cur_time = time.time()
                         if (cur_time - session.timeout) > self.config["timeout"]:
@@ -226,8 +227,6 @@ class LegendBot:
                         else:
                             await session.frame()
             await asyncio.sleep(self.config["frequency"] / 20)
-
-
 
 
 legend_bot.remove_command("help")
