@@ -45,7 +45,7 @@ class LegendGame(Game):
         self.previous_render = ""
         self.last_msg = None
         self.msg = None
-        self.game_task = None
+        self.last_frame: int = 0
         self.timeout = time.time()
         timing = modf(time.time() / self.config["frequency"])
         self.offset = floor(timing[0] * 10)
@@ -136,14 +136,19 @@ class LegendGame(Game):
                     s_time = chat_msg.time.strftime("%H:%M:%S")
                     author_text = chat_msg.author + "#" + chat_msg.discriminator + " - " + s_time
                     embed.add_field(name=author_text, value=chat_msg.message, inline=False)
-
             await self.msg.edit(embed=embed)
+            self.last_frame = time.time()
 
     async def frame(self):
         view = self.get_view(self.data["pos_x"], self.data["pos_y"])
         render = self.render_view(view)
         await self.update_screen(render)
         return
+
+    async def optional_frame(self):
+        if (time.time() - self.config["frequency"]) > self.last_frame:
+            # It's been awhile since the last frame, we can just go ahead and do one now.
+            await self.frame()
 
     def move(self, x: int, y: int, force: bool = False) -> bool:
         if self.running and self.world.height > y >= 0 and self.world.width > x >= 0:
