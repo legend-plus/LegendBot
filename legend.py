@@ -1,17 +1,22 @@
 import asyncio
+import time
 from typing import Dict, Any
-
+import threading
+from discord import Reaction, User, Client
 from discord.ext import commands
 import discord
 import json
 import logging
+
+from discord.ext.commands import Bot
+
 import legendutils
 from entities import NPC
 import interactions
 from legendgame import LegendGame
 from legendutils import World
 from legendutils import ChatMessage
-from math import hypot
+from math import hypot, floor, modf
 from pymongo import MongoClient
 import numpy
 from PIL import Image
@@ -32,10 +37,10 @@ bump_colors[(255, 255, 255)] = 1
 
 class LegendBot:
 
-    def __init__(self, bot):
+    def __init__(self, bot: Bot):
         global config
         self.config = config
-        self.bot = bot
+        self.bot: Bot = bot
 
         with open(self.config["sprites"]) as sprites_f:
             self.sprites = json.load(sprites_f)
@@ -136,6 +141,8 @@ class LegendBot:
         self.mongo = MongoClient()
         self.legend_db = self.mongo.legend
         self.users = self.legend_db.users
+        self.running = True
+        bot.loop.create_task(self.update())
 
     @commands.command()
     async def ping(self, ctx):
@@ -182,6 +189,7 @@ class LegendBot:
                 await self.games[k].disconnect("Bot is restarting, join back in a couple minutes")
                 self.games.pop(k)
             print("Exiting")
+            self.running = False
             await self.bot.close()
         else:
             await ctx.send("You do not have permissions!")
@@ -192,6 +200,35 @@ class LegendBot:
             if dist <= self.chat_radius:
                 self.games[g].add_msg(ChatMessage(ctx.author.name, ctx.author.discriminator, msg))
 
+    @legend_bot.event
+    async def on_reaction_add(self, reaction: Reaction, user: User = None):
+        if user and user.id in self.games and self.games[user.id].running:
+            await self.games[user.id].react(reaction)
+
+    @legend_bot.event
+    async def on_reaction_remove(self, reaction: Reaction, user: User = None):
+        if user and user.id in self.games and self.games[user.id].running:
+            await self.games[user.id].react(reaction)
+
+    async def update(self):
+        await self.bot.wait_until_ready()
+        offset = 0
+        while self.running:
+            timing = modf(time.time() / self.config["frequency"])
+            if floor(timing[0] * 10) != offset:
+                offset = floor(timing[0] * 10)
+                for user_id in self.games:
+                    if self.games[user_id].offset == offset:
+                        session = self.games[user_id]
+                        cur_time = time.time()
+                        if (cur_time - session.timeout) > self.config["timeout"]:
+                            await session.disconnect("Inactivity")
+                        else:
+                            await session.frame()
+            await asyncio.sleep(self.config["frequency"] / 20)
+
+
+
 
 legend_bot.remove_command("help")
 legend_bot.add_cog(LegendBot(legend_bot))
@@ -200,6 +237,5 @@ legend_bot.add_cog(LegendBot(legend_bot))
 @legend_bot.event
 async def on_ready():
     print('Logged in as:\n{0} (ID: {0.id})'.format(legend_bot.user))
-
 
 legend_bot.run(config["token"])

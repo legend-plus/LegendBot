@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import List, Dict
 
 import discord
@@ -7,7 +8,7 @@ from discord import embeds
 from game import Game
 from interactions import GuiOption, DialogueMessage, CloseGuiResult, ContinueDialogueResult, Dialogue
 from legendutils import View, ChatMessage, World
-from math import ceil, floor
+from math import ceil, floor, modf
 
 
 class LegendGame(Game):
@@ -45,6 +46,10 @@ class LegendGame(Game):
         self.last_msg = None
         self.msg = None
         self.game_task = None
+        self.timeout = time.time()
+        timing = modf(time.time() / self.config["frequency"])
+        self.offset = floor(timing[0] * 10)
+        self.start_time = timing[1]
 
     def get_view(self, pos_x: int, pos_y: int):
         # Amount of height above, and below x respectively
@@ -134,6 +139,12 @@ class LegendGame(Game):
 
             await self.msg.edit(embed=embed)
 
+    async def frame(self):
+        view = self.get_view(self.data["pos_x"], self.data["pos_y"])
+        render = self.render_view(view)
+        await self.update_screen(render)
+        return
+
     def move(self, x: int, y: int, force: bool = False) -> bool:
         if self.running and self.world.height > y >= 0 and self.world.width > x >= 0:
             if force or not self.world.collide(x, y):
@@ -199,52 +210,36 @@ class LegendGame(Game):
             self.msg = await self.ctx.send(embed=embed)
             for arrow in self.config["arrows"]:
                 await self.msg.add_reaction(arrow)
-            self.game_task = asyncio.ensure_future(self.loop())
 
-    async def loop(self):
-        timeout = 0
-        while True:
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', check=self.check, timeout=2)
-                timeout = 0
-                emoji = reaction.emoji
-                if emoji == self.config["arrows"][0]:
-                    # Left
-                    if not self.paused:
-                        self.move(self.data["pos_x"] - 1, self.data["pos_y"])
-                    else:
-                        self.gui_interact(0)
-                elif emoji == self.config["arrows"][1]:
-                    # Up
-                    if not self.paused:
-                        self.move(self.data["pos_x"], self.data["pos_y"] - 1)
-                    else:
-                        self.gui_interact(1)
-                elif emoji == self.config["arrows"][2]:
-                    # Down
-                    if not self.paused:
-                        self.move(self.data["pos_x"], self.data["pos_y"] + 1)
-                    else:
-                        self.gui_interact(2)
-                elif emoji == self.config["arrows"][3]:
-                    # Right
-                    if not self.paused:
-                        self.move(self.data["pos_x"] + 1, self.data["pos_y"])
-                    else:
-                        self.gui_interact(3)
-                view = self.get_view(self.data["pos_x"], self.data["pos_y"])
-                render = self.render_view(view)
-                await self.update_screen(render)
-                await self.msg.remove_reaction(emoji, user)
-            except asyncio.TimeoutError:
-                timeout += 2
-                if timeout > 300:
-                    await self.disconnect("5 minutes of inactivity")
-                    break
+    async def react(self, reaction):
+        if self.running:
+            self.timeout = time.time()
+            emoji = reaction.emoji
+            if emoji == self.config["arrows"][0]:
+                # Left
+                if not self.paused:
+                    self.move(self.data["pos_x"] - 1, self.data["pos_y"])
                 else:
-                    view = self.get_view(self.data["pos_x"], self.data["pos_y"])
-                    render = self.render_view(view)
-                    await self.update_screen(render)
+                    self.gui_interact(0)
+            elif emoji == self.config["arrows"][1]:
+                # Up
+                if not self.paused:
+                    self.move(self.data["pos_x"], self.data["pos_y"] - 1)
+                else:
+                    self.gui_interact(1)
+            elif emoji == self.config["arrows"][2]:
+                # Down
+                if not self.paused:
+                    self.move(self.data["pos_x"], self.data["pos_y"] + 1)
+                else:
+                    self.gui_interact(2)
+            elif emoji == self.config["arrows"][3]:
+                # Right
+                if not self.paused:
+                    self.move(self.data["pos_x"] + 1, self.data["pos_y"])
+                else:
+                    self.gui_interact(3)
+            await self.frame()
 
     async def disconnect(self, reason=None):
         if self.running:
@@ -254,7 +249,6 @@ class LegendGame(Game):
             else:
                 await self.msg.edit(content="❌ Disconnected for " + reason, embed=None)
             self.running = False
-            self.game_task.cancel()
             return self.author
         else:
             return False
