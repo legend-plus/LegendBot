@@ -252,6 +252,7 @@ class LegendBot:
             if floor(timing[0] * 10) != offset:
                 # print("From " + str(offset) + " to " + str(floor(timing[0] * 10)) + " @ " + str(timing[1]))
                 offset = floor(timing[0] * 10)
+                removals = []
                 for user_id in self.games:
                     if self.games[user_id].offset == offset and self.games[user_id].running:
                         session = self.games[user_id]
@@ -260,6 +261,10 @@ class LegendBot:
                             await session.disconnect("Inactivity")
                         else:
                             await session.frame()
+                    elif not self.games[user_id].running:
+                        removals.append[user_id]
+                for removal in removals:
+                    del self.games[removal]
             await asyncio.sleep(self.config["frequency"] / 20)
 
 
