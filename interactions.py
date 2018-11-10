@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 
 from typing import List
 
+
 class GuiResult(ABC):
     @abstractmethod
     def __init__(self):
@@ -58,7 +59,7 @@ class Dialogue(Interaction):
         self.sprite = sprite
 
     def interact(self, session):
-        session.paused = True
+        session.mode = "dialogue"
         session.gui_options = self.options
         gui_description: str = ""
 

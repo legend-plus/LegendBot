@@ -17,7 +17,6 @@ class LegendGame(Game):
         super().__init__(0, 0)
         self.ready: bool = False
         self.running: bool = False
-        self.paused: bool = False
         self.started: bool = False
         self.error: str = ""
         self.gui_options: List[GuiOption] = []
@@ -46,6 +45,7 @@ class LegendGame(Game):
         self.previous_render = ""
         self.last_msg = None
         self.msg = None
+        self.mode: str = ""
         self.last_frame: int = 0
         self.timeout = time.time()
         timing = modf(time.time() / self.config["frequency"])
@@ -162,7 +162,7 @@ class LegendGame(Game):
                     if self.world.can_trigger_encounters(x, y):
                         self.data["pos_x"] = x
                         self.data["pos_y"] = y
-                        pass#encounter =
+                        pass  # encounter =
                     else:
                         self.data["pos_x"] = x
                         self.data["pos_y"] = y
@@ -182,7 +182,7 @@ class LegendGame(Game):
             selected_result = selected_choice.result
             # TODO: Rewards
             if isinstance(selected_result, CloseGuiResult):
-                self.paused = False
+                self.mode = "world"
                 self.dialogue_buffer = None
                 self.gui_description = ""
                 self.gui_options = []
@@ -192,13 +192,6 @@ class LegendGame(Game):
                 self.dialogue_buffer = None
                 new_dialogue = self.dialogue[selected_result.dialogue_id]
                 new_dialogue.interact(self)
-
-    def check(self, reaction: discord.reaction, user: discord.user) -> bool:
-        if self.msg:
-            return user == self.author and str(reaction.emoji) in self.config["arrows"] \
-                   and reaction.message.id == self.msg.id
-        else:
-            return False
 
     def add_msg(self, message: ChatMessage) -> None:
         self.chat_buffer.append(message)
@@ -222,35 +215,27 @@ class LegendGame(Game):
                 await self.msg.add_reaction(arrow)
             self.running = True
             self.started = True
+            self.mode = "world"
 
     async def react(self, reaction):
         if self.running:
             self.timeout = time.time()
             emoji = reaction.emoji
-            if emoji == self.config["arrows"][0]:
-                # Left
-                if not self.paused:
+            if self.mode == "world":
+                if emoji == self.config["arrows"][0]:
+                    # Left
                     self.move(self.data["pos_x"] - 1, self.data["pos_y"])
-                else:
-                    self.gui_interact(0)
-            elif emoji == self.config["arrows"][1]:
-                # Up
-                if not self.paused:
+                elif emoji == self.config["arrows"][1]:
+                    # Up
                     self.move(self.data["pos_x"], self.data["pos_y"] - 1)
-                else:
-                    self.gui_interact(1)
-            elif emoji == self.config["arrows"][2]:
-                # Down
-                if not self.paused:
+                elif emoji == self.config["arrows"][2]:
+                    # Down
                     self.move(self.data["pos_x"], self.data["pos_y"] + 1)
-                else:
-                    self.gui_interact(2)
-            elif emoji == self.config["arrows"][3]:
-                # Right
-                if not self.paused:
+                elif emoji == self.config["arrows"][3]:
+                    # Right
                     self.move(self.data["pos_x"] + 1, self.data["pos_y"])
-                else:
-                    self.gui_interact(3)
+            elif self.mode == "dialogue":
+                self.gui_interact(self.config["arrows"].index(emoji))
             await self.optional_frame()
 
     async def disconnect(self, reason=None):
