@@ -2,9 +2,6 @@ from abc import ABC, abstractmethod
 
 from typing import List
 
-import game
-
-
 class GuiResult(ABC):
     @abstractmethod
     def __init__(self):
@@ -23,7 +20,7 @@ class Interaction(ABC):
         pass
 
     @abstractmethod
-    def interact(self, session: game.Game):
+    def interact(self, session):
         pass
 
 
@@ -60,10 +57,10 @@ class Dialogue(Interaction):
         self.options = options
         self.sprite = sprite
 
-    def interact(self, session: game.Game):
+    def interact(self, session):
         session.paused = True
         session.gui_options = self.options
-        gui_description = ""
+        gui_description: str = ""
 
         if hasattr(session, "config") and "arrows" in session.config:
             for x in range(min(len(session.config["arrows"]), len(self.options))):

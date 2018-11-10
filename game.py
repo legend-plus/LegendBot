@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
+from entities import Entity
 
-class Game(ABC):
+class Game(Entity):
     ready: bool
     running: bool
     paused: bool
@@ -10,8 +11,8 @@ class Game(ABC):
     dialogue_buffer: list
     gui_description: str
 
-    @abstractmethod
-    def __init__(self):
+    def __init__(self, pos_x: int, pos_y: int):
+        super().__init__("player", pos_x, pos_y, "")
         pass
 
     @abstractmethod
@@ -27,7 +28,7 @@ class Game(ABC):
         pass
 
     @abstractmethod
-    def add_msg(self) -> None:
+    def add_msg(self, msg) -> None:
         pass
 
     @abstractmethod

@@ -14,10 +14,11 @@ from math import ceil, floor, modf
 class LegendGame(Game):
 
     def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue):
-        super().__init__()
+        super().__init__(0, 0)
         self.ready: bool = False
         self.running: bool = False
         self.paused: bool = False
+        self.started: bool = False
         self.error: str = ""
         self.gui_options: List[GuiOption] = []
         if isinstance(ctx.channel, discord.DMChannel):
@@ -101,7 +102,7 @@ class LegendGame(Game):
                         if not self.world.collide(abs_x, abs_y):
                             render += self.sprites["character_one_pc"][view.view[vy][vx]]["emoji"]
                         else:
-                            render += self.sprites["character_one_pc"][32]["emoji"]
+                            render += self.sprites["character_one_pc"][34]["emoji"]
                     else:
                         render += self.sprites["character_one"][view.view[vy][vx]]["emoji"]
                 elif self.world.get_entity(abs_x, abs_y):
@@ -145,7 +146,7 @@ class LegendGame(Game):
         await self.update_screen(render)
         return
 
-    async def optional_frame(self):
+    async def optional_frame(self) -> None:
         if (time.time() - self.config["frequency"]) > self.last_frame:
             # It's been awhile since the last frame, we can just go ahead and do one now.
             await self.frame()
@@ -158,8 +159,13 @@ class LegendGame(Game):
                     self.data["pos_x"] = destination_portal["to_x"]
                     self.data["pos_y"] = destination_portal["to_y"]
                 else:
-                    self.data["pos_x"] = x
-                    self.data["pos_y"] = y
+                    if self.world.can_trigger_encounters(x, y):
+                        self.data["pos_x"] = x
+                        self.data["pos_y"] = y
+                        pass#encounter =
+                    else:
+                        self.data["pos_x"] = x
+                        self.data["pos_y"] = y
                 return True
             else:
                 if self.world.get_entity(x, y):
@@ -215,6 +221,7 @@ class LegendGame(Game):
             for arrow in self.config["arrows"]:
                 await self.msg.add_reaction(arrow)
             self.running = True
+            self.started = True
 
     async def react(self, reaction):
         if self.running:

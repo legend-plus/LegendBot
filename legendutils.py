@@ -52,6 +52,9 @@ class World:
     def collide(self, pos_x: int, pos_y: int) -> bool:
         return not self.bump_map[pos_y, pos_x] or (pos_x, pos_y) in self.entities
 
+    def can_trigger_encounters(self, pos_x: int, pos_y: int) -> bool:
+        return self.bump_map[pos_y, pos_x] == 2
+
     def get_entity(self, pos_x: int, pos_y: int) -> Optional[entities.Entity]:
         if (pos_x, pos_y) in self.entities:
             return self.entities[(pos_x, pos_y)]

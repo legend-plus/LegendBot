@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List
 import threading
 from discord import Reaction, User, Client
 from discord.ext import commands
@@ -16,12 +16,13 @@ import interactions
 from legendgame import LegendGame
 from legendutils import World
 from legendutils import ChatMessage
+from battles import Battle
 from math import hypot, floor, modf
 from pymongo import MongoClient
 import numpy
 from PIL import Image
 
-with open("config.json") as f:
+with open("config/config.json") as f:
     config = json.load(f)
 
 legend_bot = commands.Bot(command_prefix=commands.when_mentioned_or(config["prefix"]), description="Legend RPG Bot",
@@ -31,14 +32,15 @@ logging.basicConfig(level=logging.CRITICAL)
 
 # Bump Position ID for speeds
 bump_colors = {}
-bump_colors[(0, 0, 0)] = 0
-bump_colors[(255, 255, 255)] = 1
+bump_colors[(0, 0, 0)] = 0  # Solid Tile
+bump_colors[(255, 255, 255)] = 1  # Transparent Tile
+bump_colors[(255, 0, 0)] = 2  # Random Encounter Tile
 
 
 class LegendBot:
 
     def __init__(self, bot: Bot):
-        with open("config.json") as f:
+        with open("config/config.json") as f:
             self.config = json.load(f)
 
         # Values from config
@@ -57,6 +59,7 @@ class LegendBot:
         self.entities: Dict[Tuple[int, int], Entity] = {}
         self.dialogue: Dict[str, interactions.Dialogue] = {}
         self.messages = {}
+        self.battles: List[Battle] = []
 
         self.config = config
         self.bot: Bot = bot
@@ -70,11 +73,11 @@ class LegendBot:
         bot.loop.create_task(self.update())
 
     def load_config(self):
-        with open(self.config["sprites"]) as sprites_f:
+        with open("config/" + self.config["sprites"]) as sprites_f:
             self.sprites = json.load(sprites_f)
 
         # Open the img in the world argument
-        im = Image.open(self.config["world_map"])
+        im = Image.open("config/" + self.config["world_map"])
         # Get image width and height for the world
         self.width, self.height = im.size
 
@@ -101,7 +104,7 @@ class LegendBot:
             self.world_map.append(line)
 
         # Open the img in the bump argument
-        im = Image.open(self.config["bump_map"])
+        im = Image.open("config/" + self.config["bump_map"])
         # Get image width and height for the world
         self.bump_width, self.bump_height = im.size
         if self.bump_width != self.width or self.bump_height != self.height:
@@ -121,7 +124,7 @@ class LegendBot:
             self.bump_map.append(line)
 
         print("Loading portals")
-        with open(self.config["portals"]) as f:
+        with open("config/" + self.config["portals"]) as f:
             portal_json = json.load(f)
 
         self.portals.clear()
@@ -130,7 +133,7 @@ class LegendBot:
             self.portals[(portal["pos_x"], portal["pos_y"])] = portal
 
         print("Loading dialogue")
-        with open(self.config["dialogue"]) as f:
+        with open("config/" + self.config["dialogue"]) as f:
             dialogue_json = json.load(f)
 
         self.dialogue.clear()
@@ -149,7 +152,7 @@ class LegendBot:
             self.dialogue[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"], dialogue["sprite"], options)
 
         print("Loading entities")
-        with open(self.config["entities"]) as f:
+        with open("config/" + self.config["entities"]) as f:
             entity_json = json.load(f)
 
         self.entities.clear()
@@ -164,7 +167,7 @@ class LegendBot:
         self.bump_map = numpy.array(self.bump_map)
 
     def reload_config(self):
-        with open("config.json") as f:
+        with open("config/config.json") as f:
             self.config = json.load(f)
         self.load_config()
         self.world.reload(self.world_map, self.bump_map, self.portals, self.entities)
@@ -261,8 +264,8 @@ class LegendBot:
                             await session.disconnect("Inactivity")
                         else:
                             await session.frame()
-                    elif not self.games[user_id].running:
-                        removals.append[user_id]
+                    elif not self.games[user_id].running and self.games[user_id].started:
+                        removals.append(user_id)
                 for removal in removals:
                     del self.games[removal]
             await asyncio.sleep(self.config["frequency"] / 20)

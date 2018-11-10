@@ -6,6 +6,8 @@
   "sprites": "sprites.json",
   "entities": "default_entities.json",
   "dialogue": "default_dialogue.json",
+  "encounters": "default_encounters.json",
+  "enemies": "default_enemies.json",
   "prefix":"+",
   "screen_width": 12,
   "screen_height": 7,
@@ -15,7 +17,7 @@
     "pos_x": 8,
     "pos_y": 6
   },
-  "arrows": ["⬅","⬆","⬇","➡"],
+  "arrows": ["⬅","⬆","⬇","➡", "ℹ", "⏺"],
   "timeout": 300,
   "frequency": 1.5
 }
