@@ -1,0 +1,20 @@
+{
+  "item": {
+    "sprite": "unknown",
+    "item_type": "weapon",
+    "name": "Unknown Sword",
+    "description": "This sword is very peculiar...",
+    "weapon_class": "sword",
+    "damage": 0.0,
+    "damage_type": "void"
+  },
+  "unknown_sword": {
+    "sprite": "unknown",
+    "item_type": "weapon",
+    "weapon_class": "sword",
+    "name": "Sword?",
+    "description": "Is this a sword?",
+    "damage": 1.0,
+    "damage_type": "cutting"
+  }
+}

@@ -10,7 +10,9 @@ import logging
 
 from discord.ext.commands import Bot
 
+import items
 import legendutils
+import requirements
 from entities import NPC, Entity
 import interactions
 from legendgame import LegendGame
@@ -58,6 +60,7 @@ class LegendBot:
         self.portals: Dict[Tuple[int, int], Dict[str, int]] = {}
         self.entities: Dict[Tuple[int, int], Entity] = {}
         self.dialogue: Dict[str, interactions.Dialogue] = {}
+        self.base_items: Dict[str, dict] = {}
         self.messages = {}
         self.battles: List[Battle] = []
 
@@ -132,6 +135,10 @@ class LegendBot:
         for portal in portal_json:
             self.portals[(portal["pos_x"], portal["pos_y"])] = portal
 
+        print("Loading base items")
+        with open("config/" + self.config["items"]) as f:
+            self.base_items = json.load(f)
+
         print("Loading dialogue")
         with open("config/" + self.config["dialogue"]) as f:
             dialogue_json = json.load(f)
@@ -148,8 +155,19 @@ class LegendBot:
                     result = interactions.ContinueDialogueResult(opt["dialogue"])
                 else:
                     result = interactions.CloseGuiResult()
-                options.append(interactions.DialogueOption(opt["text"], result))
-            self.dialogue[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"], dialogue["sprite"], options)
+                reqs = None
+                if "requirements" in opt:
+                    reqs = [requirements.requirement_from_dict(req) for req in opt["requirements"]]
+
+                options.append(interactions.DialogueOption(opt["text"], result, reqs))
+            dialogue_items = None
+            flags = None
+            if "items" in dialogue:
+                dialogue_items = [(items.from_dict(item["item"], self.base_items), item["give"]) for item in dialogue["items"]]
+            if "flags" in dialogue:
+                flags = [requirements.operation_from_dict(flag) for flag in dialogue["flags"]]
+            self.dialogue[dialogue_id] = interactions.Dialogue(dialogue["author"], dialogue["text"],
+                                                               dialogue["sprite"], options, dialogue_items, flags)
 
         print("Loading entities")
         with open("config/" + self.config["entities"]) as f:
@@ -161,7 +179,6 @@ class LegendBot:
             if entity["type"] == "npc":
                 self.entities[(entity["pos_x"], entity["pos_y"])] = \
                     NPC(entity["pos_x"], entity["pos_y"], entity["tile"], self.dialogue[entity["dialogue"]])
-
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)
@@ -185,7 +202,8 @@ class LegendBot:
         if ctx.author.id in self.games:
             await self.games[ctx.author.id].disconnect()
             self.games.pop(ctx.author.id)
-        self.games[ctx.author.id] = LegendGame(ctx, self.config, self.users, self.world, self.games, self.bot, self.sprites, self.dialogue)
+        self.games[ctx.author.id] = LegendGame(ctx, self.config, self.users, self.world, self.games, self.bot,
+                                               self.sprites, self.dialogue, self.base_items)
         await self.games[ctx.author.id].start()
 
     @commands.command()

@@ -5,6 +5,7 @@ from typing import List, Dict
 import discord
 from discord import embeds
 
+import items
 from game import Game
 from interactions import GuiOption, DialogueMessage, CloseGuiResult, ContinueDialogueResult, Dialogue
 from legendutils import View, ChatMessage, World
@@ -13,7 +14,7 @@ from math import ceil, floor, modf
 
 class LegendGame(Game):
 
-    def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue):
+    def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue, base_items):
         super().__init__(0, 0)
         self.ready: bool = False
         self.running: bool = False
@@ -35,6 +36,7 @@ class LegendGame(Game):
         self.bot = bot
         self.sprites = sprites
         self.dialogue: Dict[str, Dialogue] = dialogue
+        self.base_items: Dict[str, dict] = base_items
         self.chat_buffer: List[ChatMessage] = []
         self.dialogue_buffer: DialogueMessage = None
         self.last_dialogue: DialogueMessage = None
@@ -42,6 +44,8 @@ class LegendGame(Game):
         self.games = games
         self.author: discord.user = ctx.author
         self.data = user_data
+        inv = [items.from_dict(inv_item, base_items) for inv_item in self.data["inventory"]]
+        self.data["inventory"] = inv
         self.previous_render = ""
         self.last_msg = None
         self.msg = None
@@ -234,12 +238,19 @@ class LegendGame(Game):
                 elif emoji == self.config["arrows"][3]:
                     # Right
                     self.move(self.data["pos_x"] + 1, self.data["pos_y"])
+                elif emoji == self.config["arrows"][4]:
+                    # Info
+                    pass
+                elif emoji == self.config["arrows"][5]:
+                    # Confirm
+                    pass
             elif self.mode == "dialogue":
                 self.gui_interact(self.config["arrows"].index(emoji))
             await self.optional_frame()
 
     async def disconnect(self, reason=None):
         if self.running:
+            self.data["inventory"] = [vars(inv_item) for inv_item in self.data["inventory"]]
             self.users.update_one({"user": str(self.author.id)}, {"$set": self.data})
             if not reason:
                 await self.msg.edit(content="❌ Disconnected", embed=None)

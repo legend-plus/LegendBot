@@ -6,6 +6,7 @@
   "sprites": "sprites.json",
   "entities": "default_entities.json",
   "dialogue": "default_dialogue.json",
+  "items": "default_items.json",
   "encounters": "default_encounters.json",
   "enemies": "default_enemies.json",
   "prefix":"+",
@@ -15,7 +16,9 @@
   "chat_buffer": 4,
   "default_user": {
     "pos_x": 8,
-    "pos_y": 6
+    "pos_y": 6,
+    "inventory": [],
+    "flags": {}
   },
   "arrows": ["⬅","⬆","⬇","➡", "ℹ", "⏺"],
   "timeout": 300,

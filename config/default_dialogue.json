@@ -15,7 +15,67 @@
         "dialogue": "jim_hi"
       },
       {
+        "text": "Give me something!",
+        "requirements": [
+          {
+            "type": "null_flag",
+            "flag": "jim_gave_item"
+          }
+        ],
+        "type": "dialogue",
+        "dialogue": "jim_item"
+      },
+      {
+        "text": "Give me something!",
+        "requirements": [
+          {
+            "type": "set_flag",
+            "flag": "jim_gave_item"
+          }
+        ],
+        "type": "dialogue",
+        "dialogue": "jim_gave_item"
+      },
+      {
         "text": "[Run Away]",
+        "type": "end"
+      }
+    ]
+  },
+  "jim_item": {
+    "author": "Jim",
+    "sprite": "jim_avatar",
+    "text": "Here, you can have this %item.",
+    "flags": [
+      {
+        "operation": "set",
+        "flag": "jim_gave_item",
+        "value": 1
+      }
+    ],
+    "items": [
+      {
+        "item": {
+          "base": "unknown_sword",
+          "description": "This sword seems to be made of clay? Does Jim know what a sword is?"
+        },
+        "give": true
+      }
+    ],
+    "options": [
+      {
+        "text": "Ok.",
+        "type": "end"
+      }
+    ]
+  },
+  "jim_gave_item": {
+    "author": "Jim MAD",
+    "sprite": "jim_avatar",
+    "text": "I already gave you an item! Go away!",
+    "options": [
+      {
+        "text": "Ok.",
         "type": "end"
       }
     ]
