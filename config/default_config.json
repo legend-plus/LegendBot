@@ -18,9 +18,11 @@
     "pos_x": 8,
     "pos_y": 6,
     "inventory": [],
-    "flags": {}
+    "flags": {},
+    "inventory_size": 99
   },
-  "arrows": ["⬅","⬆","⬇","➡", "ℹ", "⏺"],
+  "arrows": ["⬅","⬆","⬇","➡", "❌", "⏺"],
   "timeout": 300,
-  "frequency": 1.5
+  "frequency": 1.5,
+  "items_per_page": 5
 }

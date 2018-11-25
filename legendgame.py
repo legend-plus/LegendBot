@@ -6,15 +6,23 @@ import discord
 from discord import embeds
 
 import items
+import copy
 from game import Game
 from interactions import GuiOption, DialogueMessage, CloseGuiResult, ContinueDialogueResult, Dialogue
 from legendutils import View, ChatMessage, World
 from math import ceil, floor, modf
 
+overworld_modes: List[str] = ["world", "dialogue"]
+inventory_modes: List[str] = ["inventory", "inventory_context"]
+inv_filters: List[str] = ["all", "weapon", "consumable", "quest"]
+context_count: int = 3
+context_options: List[str] = ["Equip", "Drop", "Move"]
+
 
 class LegendGame(Game):
 
     def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue, base_items):
+        global inv_filters
         super().__init__(0, 0)
         self.ready: bool = False
         self.running: bool = False
@@ -26,8 +34,8 @@ class LegendGame(Game):
             return
         user_data = users.find_one({"user": str(ctx.author.id)})
         if not user_data:
-            user_data = config["default_user"]
-            user_data["user"] = ctx.author.id
+            user_data = copy.deepcopy(config["default_user"])
+            user_data["user"] = str(ctx.author.id)
             users.insert_one(user_data)
         self.config = config
         self.ctx = ctx
@@ -40,21 +48,33 @@ class LegendGame(Game):
         self.chat_buffer: List[ChatMessage] = []
         self.dialogue_buffer: DialogueMessage = None
         self.last_dialogue: DialogueMessage = None
+        self.facing: int = 0
         self.gui_description: str = ""
         self.games = games
         self.author: discord.user = ctx.author
         self.data = user_data
+        self.facings: List[str] = ["left","up","down","right"]
         inv = [items.from_dict(inv_item, base_items) for inv_item in self.data["inventory"]]
         self.data["inventory"] = inv
         self.previous_render = ""
+        self.previous_inv_render = ""
         self.last_msg = None
         self.msg = None
         self.mode: str = ""
         self.last_frame: int = 0
+        self.inv_cursor: int = 0
+        self.context_cursor: int = 0
+        self.inv_index: int = 0
+        self.opened_inventory: List[items.Item] = []
+        self.inv_view: List[items.Item] = []
+        self.inv_filter: str = inv_filters[0]
         self.timeout = time.time()
         timing = modf(time.time() / self.config["frequency"])
         self.offset = floor(timing[0] * 10)
         self.start_time = timing[1]
+
+    def get_char_tile(self, view: View, vx: int, vy: int):
+        return self.sprites["tiles"][view.view[vy][vx]]["char"]
 
     def get_view(self, pos_x: int, pos_y: int):
         # Amount of height above, and below x respectively
@@ -94,7 +114,7 @@ class LegendGame(Game):
         for i in self.games:
             g = self.games[i]
             if g.author == self.author or not (g.data["pos_x"], g.data["pos_y"]) in positions:
-                positions[(g.data["pos_x"], g.data["pos_y"])] = g.author
+                positions[(g.data["pos_x"], g.data["pos_y"])] = (g.author, g.facing)
         render = ""
         for vy in range(len(view.view)):
             render += "\n"
@@ -102,13 +122,13 @@ class LegendGame(Game):
                 abs_x = vx + view.min_x
                 abs_y = vy + view.min_y
                 if (abs_x, abs_y) in positions:
-                    if positions[(abs_x, abs_y)] == self.author:
+                    if positions[(abs_x, abs_y)] == (self.author, self.facing):
                         if not self.world.collide(abs_x, abs_y):
-                            render += self.sprites["character_one_pc"][view.view[vy][vx]]["emoji"]
+                            render += self.sprites["characters"]["rowan"]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
                         else:
-                            render += self.sprites["character_one_pc"][34]["emoji"]
+                            render += self.sprites["characters"]["rowan"]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
                     else:
-                        render += self.sprites["character_one"][view.view[vy][vx]]["emoji"]
+                        render += self.sprites["characters"]["rowan"]["other"][self.get_char_tile(view, vx, vy)][self.facings[positions[(abs_x, abs_y)][1]]]
                 elif self.world.get_entity(abs_x, abs_y):
                     entity = self.world.get_entity(abs_x, abs_y)
                     render += self.sprites["entities"][entity.tile]
@@ -116,17 +136,17 @@ class LegendGame(Game):
                     render += self.sprites["tiles"][view.view[vy][vx]]["emoji"]
         return render[1:]
 
-    async def update_screen(self, render: str):
+    async def update_screen(self, render: str, inv_render: str = None):
         if render != self.previous_render or (len(self.chat_buffer) > 0
                                               and self.last_msg != self.chat_buffer[-1].message) \
-                or self.dialogue_buffer != self.last_dialogue:
+                or self.dialogue_buffer != self.last_dialogue \
+                or self.previous_inv_render != inv_render:
             embed = embeds.Embed(
                 color=10038562,
                 title="Legend",
                 url="https://discordapp.com",
                 description=render
             )
-
             self.previous_render = render
             if self.dialogue_buffer:
                 self.last_dialogue = self.dialogue_buffer
@@ -141,13 +161,81 @@ class LegendGame(Game):
                     s_time = chat_msg.time.strftime("%H:%M:%S")
                     author_text = chat_msg.author + "#" + chat_msg.discriminator + " - " + s_time
                     embed.add_field(name=author_text, value=chat_msg.message, inline=False)
+
+            if inv_render:
+                bag_desc: str = "Bag " + str(min(self.inv_cursor + 1, len(self.inv_view))) + "/" + str(len(self.inv_view))
+                self.previous_inv_render = bag_desc + "\n" + inv_render
+                embed.add_field(name=bag_desc, value=inv_render, inline=False)
+
             await self.msg.edit(embed=embed)
             self.last_frame = time.time()
 
+    def get_inv_range(self, inv: List[items.Item], inv_filter: str, cursor_pos: int) -> List[items.Item]:
+        cursor_min: int = int(min(cursor_pos, len(inv) - self.config["items_per_page"]))
+        inv_range: List[items.Item] = inv[cursor_min:cursor_min + self.config["items_per_page"]]
+        return inv_range
+
+    def render_items(self, inv: List[items.Item], inv_view: List[items.Item], cursor_pos: int) -> str:
+        global context_options
+        output: str = ""
+        if cursor_pos > 0:
+            output += "⏫ "
+        else:
+            output += self.sprites["utility"]["spacing"] + " "
+        output += (self.sprites["utility"]["spacing"] + " ") * 2
+        output += "◀ " + self.inv_filter + " ▶\n"
+        for x in range(len(inv_view)):
+            if x < len(inv_view):
+                if x != self.inv_index:
+                    output += self.sprites["utility"]["spacing"] + " "
+                else:
+                    if self.mode == "inventory":
+                        output += "▶ "
+                    else:
+                        output += "⤵ "
+                output += self.sprites["items"][inv_view[x].get_sprite(self.base_items)] + " " + inv_view[x].get_name(self.base_items) + "\n"
+                if self.mode == "inventory_context" and x == self.inv_index:
+                    for y in range(3):
+                        output += self.sprites["utility"]["spacing"] + " "
+                        if self.context_cursor == y:
+                            output += "▶" + " "
+                        else:
+                            output += self.sprites["utility"]["spacing"] + " "
+                        output += context_options[y] + "\n"
+        if cursor_pos + len(inv_view) < (len(inv)):
+            output += "⏬"
+        else:
+            output += self.sprites["utility"]["spacing"]
+        return output
+
+    def render_item_info(self, item: items.Item) -> str:
+        output: str = ""
+        output += self.sprites["items"][item.get_sprite(self.base_items)] + "\n"
+        if isinstance(item, items.Weapon):
+            output += "**Name:** " + self.sprites["items"][item.get_weapon_class(self.base_items)] + " " + item.get_name(self.base_items) + "\n"
+        else:
+            output += "**Name:** " + self.sprites["items"][item.get_item_type(self.base_items)] + " " + item.get_name(self.base_items) + "\n"
+        output += "**Description:** " + item.get_description(self.base_items) + "\n"
+        if isinstance(item, items.Weapon):
+            output += "**Damage:** " + str(item.get_damage(self.base_items))
+        return output
+
     async def frame(self):
-        view = self.get_view(self.data["pos_x"], self.data["pos_y"])
-        render = self.render_view(view)
-        await self.update_screen(render)
+        global overworld_modes
+        global inventory_modes
+        if self.mode in overworld_modes:
+            view = self.get_view(self.data["pos_x"], self.data["pos_y"])
+            render = self.render_view(view)
+            await self.update_screen(render)
+        elif self.mode in inventory_modes:
+            inv_range = self.get_inv_range(self.inv_view, self.inv_filter, self.inv_cursor)
+            inv_render = self.render_items(self.inv_view, inv_range, self.inv_cursor)
+            if self.inv_cursor < len(self.inv_view):
+                item_render = self.render_item_info(self.inv_view[self.inv_cursor])
+            else:
+                item_render = ""
+            #print(str(inv_render))
+            await self.update_screen(item_render, inv_render=inv_render)
         return
 
     async def optional_frame(self) -> None:
@@ -202,6 +290,13 @@ class LegendGame(Game):
         if len(self.chat_buffer) > self.config["chat_buffer"]:
             self.chat_buffer.pop(0)
 
+    def get_inv_view(self, inv: List[items.Item], inv_filter: str):
+        view: List[items.Item] = []
+        for item in inv:
+            if item.get_item_type(self.base_items) == inv_filter or inv_filter == "all":
+                view.append(item)
+        return view
+
     async def start(self):
         if not self.ready and self.error:
             self.ctx.send(self.error)
@@ -221,31 +316,105 @@ class LegendGame(Game):
             self.started = True
             self.mode = "world"
 
+    async def open_inventory(self, inventory: List[items.Item] = None):
+        global inv_filters
+        if inventory is None:
+            self.opened_inventory = self.data["inventory"]
+        else:
+            self.opened_inventory = inventory
+        self.mode = "inventory"
+        self.inv_index = 0
+        self.inv_cursor = 0
+        self.inv_filter = inv_filters[0]
+        self.inv_view = self.opened_inventory
+        await self.optional_frame()
+
     async def react(self, reaction):
+        global inv_filters
+        global context_count
         if self.running:
             self.timeout = time.time()
             emoji = reaction.emoji
             if self.mode == "world":
-                if emoji == self.config["arrows"][0]:
-                    # Left
+                if emoji == self.config["arrows"][0]:  # Left
+                    self.facing = 0
                     self.move(self.data["pos_x"] - 1, self.data["pos_y"])
-                elif emoji == self.config["arrows"][1]:
-                    # Up
+                elif emoji == self.config["arrows"][1]:  # Up
+                    self.facing = 1
                     self.move(self.data["pos_x"], self.data["pos_y"] - 1)
-                elif emoji == self.config["arrows"][2]:
-                    # Down
+                elif emoji == self.config["arrows"][2]:  # Down
+                    self.facing = 2
                     self.move(self.data["pos_x"], self.data["pos_y"] + 1)
-                elif emoji == self.config["arrows"][3]:
-                    # Right
+                elif emoji == self.config["arrows"][3]:  # Right
+                    self.facing = 3
                     self.move(self.data["pos_x"] + 1, self.data["pos_y"])
-                elif emoji == self.config["arrows"][4]:
-                    # Info
+                elif emoji == self.config["arrows"][4]:  # X
                     pass
-                elif emoji == self.config["arrows"][5]:
-                    # Confirm
+                elif emoji == self.config["arrows"][5]:  # Confirm
                     pass
             elif self.mode == "dialogue":
                 self.gui_interact(self.config["arrows"].index(emoji))
+            elif self.mode == "inventory":
+                if emoji == self.config["arrows"][0]:  # Left
+                    cur_index = inv_filters.index(self.inv_filter)
+                    if cur_index > 0:
+                        cur_index -= 1
+                    else:
+                        cur_index = len(inv_filters) - 1
+                    self.inv_cursor = 0
+                    self.inv_index = 0
+                    self.inv_filter = inv_filters[cur_index]
+                    self.inv_view = self.get_inv_view(self.opened_inventory, self.inv_filter)
+                elif emoji == self.config["arrows"][3]:  # Right
+                    cur_index = inv_filters.index(self.inv_filter)
+                    if cur_index < len(inv_filters) - 1:
+                        cur_index += 1
+                    else:
+                        cur_index = 0
+                    self.inv_cursor = 0
+                    self.inv_index = 0
+                    self.inv_filter = inv_filters[cur_index]
+                    self.inv_view = self.get_inv_view(self.opened_inventory, self.inv_filter)
+                elif emoji == self.config["arrows"][2]:  # Down
+                    self.inv_cursor += 1
+                    if self.inv_cursor >= len(self.inv_view):
+                        self.inv_cursor = 0
+                        self.inv_index = 0
+                    else:
+                        self.inv_index = max(0, self.inv_cursor - len(self.inv_view) + self.config["items_per_page"])
+                elif emoji == self.config["arrows"][1]:  # Up
+                    self.inv_cursor -= 1
+                    if self.inv_cursor < 0:
+                        self.inv_cursor = max(0, len(self.inv_view) - 1)
+                        self.inv_index = self.config["items_per_page"] - 1
+                    else:
+                        self.inv_index = max(0, self.inv_cursor - len(self.inv_view) + self.config["items_per_page"])
+                elif emoji == self.config["arrows"][4]:  # X
+                    self.mode = "world"
+                    self.inv_index = 0
+                    self.inv_cursor = 0
+                    self.inv_filter = inv_filters[0]
+                    self.opened_inventory = []
+                    self.inv_view = []
+                elif emoji == self.config["arrows"][5]:  # Confirm
+                    if self.inv_cursor < len(self.inv_view):
+                        self.mode = "inventory_context"
+                        self.context_cursor = 0
+            elif self.mode == "inventory_context":
+                if emoji == self.config["arrows"][1]:  # Up
+                    if self.context_cursor > 0:
+                        self.context_cursor -= 1
+                    else:
+                        self.context_cursor = (context_count -1)
+                elif emoji == self.config["arrows"][2]:  # Down
+                    if self.context_cursor < (context_count - 1):
+                        self.context_cursor += 1
+                    else:
+                        self.context_cursor = 0
+                elif emoji == self.config["arrows"][4]:  # X
+                    self.mode = "inventory"
+                elif emoji == self.config["arrows"][5]:  # Confirm
+                    pass
             await self.optional_frame()
 
     async def disconnect(self, reason=None):

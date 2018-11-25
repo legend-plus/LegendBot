@@ -47,6 +47,8 @@ class LegendBot:
 
         # Values from config
         self.sprites = {}
+        self.colors: List[str] = []
+        self.color_map: Dict[str, int] = {}
         self.width: int = None
         self.height: int = None
         self.bump_width: int = None
@@ -101,7 +103,14 @@ class LegendBot:
             line = []
             for x in range(self.width):
                 # Create a line variable for the x values, using their color index
-                line.append(self.sprites["colors"][legendutils.to_hex(im.getpixel((x, y)))])
+                found_tile: bool = False
+                pixel = legendutils.to_hex(im.getpixel((x, y)))
+                for pt in range(len(self.sprites["tiles"])):
+                    if self.sprites["tiles"][pt]["color"] == pixel:
+                        line.append(pt)
+                        found_tile = True
+                if not found_tile:
+                    line.append(0)
             # Add the line to the world
             # world[y][x]
             self.world_map.append(line)
@@ -221,6 +230,26 @@ class LegendBot:
             await ctx.send("You can only use this command ingame!")
 
     @commands.command()
+    async def inventory(self, ctx,):
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
+            if self.games[ctx.author.id].mode == "world":
+                await self.open_inventory(self.games[ctx.author.id])
+            else:
+                await ctx.send("You can only use this command from the overworld!")
+        else:
+            await ctx.send("You can only use this command ingame!")
+
+    @commands.command()
+    async def i(self, ctx):
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
+            if self.games[ctx.author.id].mode == "world":
+                await self.open_inventory(self.games[ctx.author.id])
+            else:
+                await ctx.send("You can only use this command from the overworld!")
+        else:
+            await ctx.send("You can only use this command ingame!")
+
+    @commands.command()
     async def tp(self, ctx, x: int, y: int):
         if ctx.author.id in self.games and self.games[ctx.author.id].running:
             self.games[ctx.author.id].move(x, y, force=True)
@@ -254,6 +283,9 @@ class LegendBot:
             dist = hypot(self.games[g].data["pos_x"] - og.data["pos_x"], self.games[g].data["pos_y"] - og.data["pos_y"])
             if dist <= self.chat_radius:
                 self.games[g].add_msg(ChatMessage(ctx.author.name, ctx.author.discriminator, msg))
+
+    async def open_inventory(self, og: LegendGame):
+        await og.open_inventory()
 
     @legend_bot.event
     async def on_reaction_add(self, reaction: Reaction, user: User = None):

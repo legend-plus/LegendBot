@@ -1,6 +1,7 @@
 #IDE folders
 venv/
 .idea/
+sprites/
 #Secret Config Files
 config.json
 portals.json

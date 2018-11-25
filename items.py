@@ -48,6 +48,24 @@ class Weapon(Item):
         if damage_type is not None:
             self.damage_type: str = damage_type
 
+    def get_damage(self, base_items):
+        if hasattr(self, "damage"):
+            return self.damage
+        else:
+            return base_items[self.base]["damage"]
+
+    def get_damage_type(self, base_items):
+        if hasattr(self, "damage_type"):
+            return self.damage_type
+        else:
+            return base_items[self.base]["damage_type"]
+
+    def get_weapon_class(self, base_items):
+        if hasattr(self, "weapon_class"):
+            return self.weapon_class
+        else:
+            return base_items[self.base]["weapon_class"]
+
 
 def from_dict(item_dict: dict, item_bases: dict) -> Item:
     if ("item_type" in item_dict and item_dict["item_type"] == "weapon") or item_bases[item_dict["base"]]["item_type"]:
