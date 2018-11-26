@@ -171,7 +171,7 @@ class LegendGame(Game):
             self.last_frame = time.time()
 
     def get_inv_range(self, inv: List[items.Item], inv_filter: str, cursor_pos: int) -> List[items.Item]:
-        cursor_min: int = int(min(cursor_pos, len(inv) - self.config["items_per_page"]))
+        cursor_min: int = int(max(0, min(cursor_pos, len(inv) - self.config["items_per_page"])))
         inv_range: List[items.Item] = inv[cursor_min:cursor_min + self.config["items_per_page"]]
         return inv_range
 

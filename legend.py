@@ -250,6 +250,16 @@ class LegendBot:
             await ctx.send("You can only use this command ingame!")
 
     @commands.command()
+    async def inv(self, ctx):
+        if ctx.author.id in self.games and self.games[ctx.author.id].running:
+            if self.games[ctx.author.id].mode == "world":
+                await self.open_inventory(self.games[ctx.author.id])
+            else:
+                await ctx.send("You can only use this command from the overworld!")
+        else:
+            await ctx.send("You can only use this command ingame!")
+
+    @commands.command()
     async def tp(self, ctx, x: int, y: int):
         if ctx.author.id in self.games and self.games[ctx.author.id].running:
             self.games[ctx.author.id].move(x, y, force=True)
