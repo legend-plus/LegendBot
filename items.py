@@ -51,24 +51,30 @@ class Weapon(Item):
     def get_damage(self, base_items):
         if hasattr(self, "damage"):
             return self.damage
-        else:
+        elif "damage" in base_items[self.base]:
             return base_items[self.base]["damage"]
+        else:
+            return 0.0
 
     def get_damage_type(self, base_items):
         if hasattr(self, "damage_type"):
             return self.damage_type
-        else:
+        elif "damage_type" in base_items[self.base]:
             return base_items[self.base]["damage_type"]
+        else:
+            return "void"
 
     def get_weapon_class(self, base_items):
         if hasattr(self, "weapon_class"):
             return self.weapon_class
-        else:
+        elif "weapon_class" in base_items[self.base]:
             return base_items[self.base]["weapon_class"]
+        else:
+            return "unknown"
 
 
 def from_dict(item_dict: dict, item_bases: dict) -> Item:
-    if ("item_type" in item_dict and item_dict["item_type"] == "weapon") or item_bases[item_dict["base"]]["item_type"]:
+    if ("item_type" in item_dict and item_dict["item_type"] == "weapon") or item_bases[item_dict["base"]]["item_type"] == "weapon":
         return Weapon(
                       item_dict.get("base", "item"),
                       item_dict.get("sprite", None),
@@ -79,11 +85,27 @@ def from_dict(item_dict: dict, item_bases: dict) -> Item:
                       item_dict.get("damage", None),
                       item_dict.get("damage_type", None)
                       )
-    else:
+    elif "item_type" in item_dict:
         return Item(
                     item_dict.get("base", None),
                     item_dict.get("sprite", None),
-                    "misc",
+                    item_dict["item_type"],
                     item_dict.get("name", None),
                     item_dict.get("description", None),
                     )
+    elif "item_type" in item_bases[item_dict["base"]]:
+        return Item(
+            item_dict.get("base", None),
+            item_dict.get("sprite", None),
+            item_bases[item_dict["base"]]["item_type"],
+            item_dict.get("name", None),
+            item_dict.get("description", None),
+        )
+    else:
+        return Item(
+            item_dict.get("base", None),
+            item_dict.get("sprite", None),
+            "misc",
+            item_dict.get("name", None),
+            item_dict.get("description", None),
+        )
