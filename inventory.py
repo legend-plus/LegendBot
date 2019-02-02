@@ -22,6 +22,26 @@ class Inventory:
         self.config = config
         self.get_view()
 
+    def add_item(self, item: items.Item):
+        self.items.append(item)
+        self.set_filter(self.get_filter())
+        self.get_view()
+
+    def remove_item_index(self, index: int):
+        self.items.pop(index)
+        self.set_filter(self.get_filter())
+        self.get_view()
+
+    def remove_item(self, item: items.Item):
+        for x in range(len(self.items)):
+            if self.items[x] == item:
+                self.items.pop(x)
+                self.set_filter(self.get_filter())
+                self.get_view()
+                return True
+        else:
+            return False
+
     def set_filter(self, inv_filter: str):
         self.view: List[items.Item] = []
         for item in self.items:

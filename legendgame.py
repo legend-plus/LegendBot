@@ -64,6 +64,7 @@ class LegendGame(Game):
         self.mode: str = ""
         self.last_frame: int = 0
         self.context_cursor: int = 0
+        self.confirm_drop: bool = False
         self.opened_inventory: Inventory = Inventory([], base_items, config)
         self.timeout = time.time()
         timing = modf(time.time() / self.config["frequency"])
@@ -194,7 +195,10 @@ class LegendGame(Game):
                         output += "▶" + " "
                     else:
                         output += self.sprites["utility"]["spacing"] + " "
-                    output += context_options[y] + "\n"
+                    output += context_options[y]
+                    if context_options[y] == "Drop" and self.confirm_drop:
+                        output += " **[Confirm]**"
+                    output += "\n"
         if (screen_pos + self.config["items_per_page"]) < (len(inv.view)):
             output += "⏬"
         else:
@@ -353,15 +357,18 @@ class LegendGame(Game):
                     self.opened_inventory = Inventory([], self.base_items, self.config)
                 elif emoji == self.config["arrows"][5]:  # Confirm
                     if self.opened_inventory.cursor < len(self.opened_inventory.view):
+                        self.confirm_drop = False
                         self.mode = "inventory_context"
                         self.context_cursor = 0
             elif self.mode == "inventory_context":
                 if emoji == self.config["arrows"][1]:  # Up
+                    self.confirm_drop = False
                     if self.context_cursor > 0:
                         self.context_cursor -= 1
                     else:
                         self.context_cursor = (context_count -1)
                 elif emoji == self.config["arrows"][2]:  # Down
+                    self.confirm_drop = False
                     if self.context_cursor < (context_count - 1):
                         self.context_cursor += 1
                     else:
@@ -369,7 +376,22 @@ class LegendGame(Game):
                 elif emoji == self.config["arrows"][4]:  # X
                     self.mode = "inventory"
                 elif emoji == self.config["arrows"][5]:  # Confirm
-                    pass
+                    chosen_option = context_options[self.context_cursor]
+                    if chosen_option == "Equip":
+                        pass
+                    elif chosen_option == "Drop":
+                        if self.confirm_drop:
+                            highlighted_item: items.Item = self.opened_inventory.view[self.opened_inventory.cursor]
+                            self.opened_inventory.remove_item(highlighted_item)
+                            self.confirm_drop = False
+                            self.mode = "inventory"
+                            self.opened_inventory.cursor_up()
+                        else:
+                            self.confirm_drop = True
+                    elif chosen_option == "Move":
+                        pass
+                    else:
+                        pass
             await self.optional_frame()
 
     async def disconnect(self, reason=None):
