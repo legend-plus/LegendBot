@@ -164,6 +164,16 @@ class LegendGame(Game):
                 bag_desc: str = "Bag " + str(min(self.opened_inventory.cursor + 1, len(self.opened_inventory.view))) + "/" + str(len(self.opened_inventory.view))
                 self.previous_inv_render = bag_desc + "\n" + inv_render
                 embed.add_field(name=bag_desc, value=inv_render, inline=False)
+                equipment_desc = "Equipment"
+                equipment_render = self.sprites["utility"]["spacing"] + " " + self.sprites["gui"]["equipment_head"]
+                equipment_render += " " + self.sprites["utility"]["spacing"] + "\n"
+                equipment_render += self.sprites["gui"]["equipment_offhand"] + " " + self.sprites["gui"]["equipment_body"]
+                equipment_render += " " + self.sprites["gui"]["equipment_hand"] + "\n"
+                equipment_render += self.sprites["gui"]["equipment_special"] + " " + self.sprites["gui"]["equipment_legs"]
+                equipment_render += " " + self.sprites["gui"]["equipment_special"] + "\n"
+                equipment_render += self.sprites["utility"]["spacing"] + " " + self.sprites["gui"]["equipment_feet"]
+                equipment_render += " " + self.sprites["utility"]["spacing"] + "\n"
+                embed.add_field(name=equipment_desc, value=equipment_render, inline=False)
 
             await self.msg.edit(embed=embed)
             self.last_frame = time.time()
