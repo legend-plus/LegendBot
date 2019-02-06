@@ -11,6 +11,7 @@ from game import Game
 from interactions import GuiOption, DialogueMessage, CloseGuiResult, ContinueDialogueResult, Dialogue
 from inventory import Inventory
 from legendutils import View, ChatMessage, World
+import sprite_render
 from math import ceil, floor, modf
 
 overworld_modes: List[str] = ["world", "dialogue"]
@@ -165,14 +166,37 @@ class LegendGame(Game):
                 self.previous_inv_render = bag_desc + "\n" + inv_render
                 embed.add_field(name=bag_desc, value=inv_render, inline=False)
                 equipment_desc = "Equipment"
-                equipment_render = self.sprites["utility"]["spacing"] + " " + self.sprites["gui"]["equipment_head"]
-                equipment_render += " " + self.sprites["utility"]["spacing"] + "\n"
-                equipment_render += self.sprites["gui"]["equipment_offhand"] + " " + self.sprites["gui"]["equipment_body"]
-                equipment_render += " " + self.sprites["gui"]["equipment_hand"] + "\n"
-                equipment_render += self.sprites["gui"]["equipment_special"] + " " + self.sprites["gui"]["equipment_legs"]
-                equipment_render += " " + self.sprites["gui"]["equipment_special"] + "\n"
-                equipment_render += self.sprites["utility"]["spacing"] + " " + self.sprites["gui"]["equipment_feet"]
-                equipment_render += " " + self.sprites["utility"]["spacing"] + "\n"
+
+                equipment_render = self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["gui"]["equipment_head"]
+                equipment_render += self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["gui"]["stats_max_health"] + " "
+                equipment_render += sprite_render.render_integer(self.sprites, 420, 3)
+                equipment_render += "\n"
+
+                equipment_render += self.sprites["gui"]["equipment_offhand"]
+                equipment_render += self.sprites["gui"]["equipment_body"]
+                equipment_render += self.sprites["gui"]["equipment_hand"]
+                equipment_render += self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["gui"]["stats_armor"] + " "
+                equipment_render += sprite_render.render_integer(self.sprites, 69, 3)
+                equipment_render += "\n"
+
+                equipment_render += self.sprites["gui"]["equipment_special"]
+                equipment_render += self.sprites["gui"]["equipment_legs"]
+                equipment_render += self.sprites["gui"]["equipment_special"]
+                equipment_render += self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["gui"]["stats_sword"] + " "
+                equipment_render += sprite_render.render_integer(self.sprites, 0, 3)
+                equipment_render += "\n"
+
+                equipment_render += self.sprites["utility"]["spacing"]
+                equipment_render += self.sprites["gui"]["equipment_feet"]
+                equipment_render += (self.sprites["utility"]["spacing"] * 2)
+                equipment_render += self.sprites["gui"]["stats_shield"] + " "
+                equipment_render += sprite_render.render_integer(self.sprites, 999, 3)
+                equipment_render += "\n"
                 embed.add_field(name=equipment_desc, value=equipment_render, inline=False)
 
             await self.msg.edit(embed=embed)
