@@ -6,6 +6,13 @@ import sys
 from threading import Thread
 
 
+def create_packet(msg):
+    if type(msg) == str:
+        msg = msg.encode("utf-8")
+    packet = struct.pack(">I", len(msg)) + msg
+    return packet
+
+
 class ClientHandler(asyncore.dispatcher_with_send):
         def handle_read(self):
             #Get Packet Length
@@ -13,8 +20,9 @@ class ClientHandler(asyncore.dispatcher_with_send):
             if not msg_len:
                 return
             msg_len = struct.unpack(">I", msg_len)[0]
+            packet_type = self.recv(2)
             packet = self.recv(msg_len)
-            self.send(packet)
+            self.send(create_packet(packet))
 
 
 class Server(asyncore.dispatcher):
