@@ -9,6 +9,7 @@ from math import hypot, floor, modf
 import legendutils
 from discordgame import DiscordGame
 import legend
+from threading import Thread
 
 # Bump Position ID for speeds
 bump_colors = {}
@@ -24,6 +25,7 @@ def create_bot(config, legend_game: legend.Legend):
     class LegendBot:
 
         def __init__(self, bot: Bot, config, legend: legend.Legend):
+            print("Init LegendBot")
             with open("config/config.json") as f:
                 self.config = json.load(f)
             self.w_screen: int = None
@@ -34,7 +36,14 @@ def create_bot(config, legend_game: legend.Legend):
             self.legend = legend
             self.load_config()
             self.running = True
-            bot.loop.create_task(self.update())
+            self.legend.bot = self
+
+            bot.loop.create_task(self.background())
+
+        async def background(self):
+            await self.bot.wait_until_ready()
+            await self.legend.after_bot(self.bot.loop)
+            await self.update()
 
         def load_config(self):
             self.w_screen = self.config["screen_width"]
@@ -156,7 +165,6 @@ def create_bot(config, legend_game: legend.Legend):
                 await self.legend.games[user.id].react(reaction)
 
         async def update(self):
-            await self.bot.wait_until_ready()
             offset = 0
             while self.running:
                 timing = modf(time.time() / self.config["frequency"])
@@ -186,7 +194,7 @@ def create_bot(config, legend_game: legend.Legend):
     async def on_ready():
         print('Logged in as:\n{0} (ID: {0.id})'.format(legend_bot.user))
 
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(legend_bot.run(config["token"]))
-    print("Discord Bot Started")
+    print("Run Bot")
+    legend_bot.run(config["token"])
+
     return bot

@@ -1,3 +1,6 @@
+import asyncore
+import threading
+
 from PIL import Image
 from pymongo import MongoClient
 import json
@@ -50,9 +53,23 @@ class Legend:
         self.games: Dict[str, DiscordGame] = {}
         self.load_config()
         self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
-        self.bot = bot.create_bot(config, self)
-        self.server = Server(config)
+        self.server = None
+        self.server_thread = None
+        self.running = False
+        print("Create bot")
+        self.bot = None
+        self.loop = None
+        # This is blocking, it must run last.
+        bot.create_bot(config, self)
+
+    async def after_bot(self, loop):
+        print("Create server")
         self.running = True
+        self.loop = loop
+        self.server = Server(self.config, loop)
+        self.server_thread = threading.Thread(target=asyncore.loop)
+        self.server_thread.start()
+        print("Server Thread Started")
 
     def load_config(self):
         with open("config/" + self.config["sprites"]) as sprites_f:
