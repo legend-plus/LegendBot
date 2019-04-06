@@ -1,28 +1,39 @@
 import asyncio
 import asyncore
+from bidict import bidict
 import socket
 import struct
 import sys
 from threading import Thread
 
-
-def create_packet(msg):
-    if type(msg) == str:
-        msg = msg.encode("utf-8")
-    packet = struct.pack(">I", len(msg)) + msg
-    return packet
+import packets
+from packets import Packet, PingPacket, PongPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
+        def send_packet(self, packet: Packet):
+            packet_id: int = packet.id
+            data: bytes = packet.encode()
+            packet_bytes = packets.create_packet(packet_id, data)
+            self.send(packet_bytes)
+
         def handle_read(self):
-            #Get Packet Length
+            # Get Packet Length
             msg_len = self.recv(4)
             if not msg_len:
                 return
             msg_len = struct.unpack(">I", msg_len)[0]
-            packet_type = self.recv(2)
-            packet = self.recv(msg_len)
-            self.send(create_packet(packet))
+            packet_contents = self.recv(msg_len)
+
+            packet_id: int = struct.unpack(">h", packet_contents[0:2])[0]
+            packet_data: bytes = packet_contents[2:]
+
+            packet = packets.decode(packet_id, packet_data)
+
+            if type(packet) == PingPacket:
+                packet: PingPacket
+                response = PongPacket(packet.msg)
+                self.send_packet(response)
 
 
 class Server(asyncore.dispatcher):
