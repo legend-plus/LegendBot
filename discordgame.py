@@ -20,7 +20,7 @@ context_count: int = 3
 context_options: List[str] = ["Equip", "Drop", "Move"]
 
 
-class LegendGame(Game):
+class DiscordGame(Game):
 
     def __init__(self, ctx, config, users, world, games, bot, sprites, dialogue, base_items):
         global inv_filters
@@ -54,7 +54,7 @@ class LegendGame(Game):
         self.games = games
         self.author: discord.user = ctx.author
         self.data = user_data
-        self.facings: List[str] = ["left","up","down","right"]
+        self.facings: List[str] = ["left", "up", "down", "right"]
         inv = [items.from_dict(inv_item, base_items) for inv_item in self.data["inventory"]]
         self.player_inventory = Inventory(inv, base_items, config)
         self.data["inventory"] = self.player_inventory
@@ -162,7 +162,8 @@ class LegendGame(Game):
                     embed.add_field(name=author_text, value=chat_msg.message, inline=False)
 
             if inv_render:
-                bag_desc: str = "Bag " + str(min(self.opened_inventory.cursor + 1, len(self.opened_inventory.view))) + "/" + str(len(self.opened_inventory.view))
+                bag_desc: str = "Bag " + str(min(self.opened_inventory.cursor + 1, len(self.opened_inventory.view))) +\
+                                "/" + str(len(self.opened_inventory.view))
                 self.previous_inv_render = bag_desc + "\n" + inv_render
                 embed.add_field(name=bag_desc, value=inv_render, inline=False)
                 equipment_desc = "Equipment"
@@ -207,7 +208,7 @@ class LegendGame(Game):
         cursor_pos: int = inv.cursor
         screen_pos: int = inv.screen_cursor
         output: str = ""
-        if screen_pos> 0:
+        if screen_pos > 0:
             output += "⏫ "
         else:
             output += self.sprites["utility"]["spacing"] + " "
@@ -221,7 +222,8 @@ class LegendGame(Game):
                     output += "▶ "
                 else:
                     output += "⤵ "
-            output += self.sprites["items"][inv.inv_display[x].get_sprite(self.base_items)] + " " + inv.inv_display[x].get_name(self.base_items) + "\n"
+            output += self.sprites["items"][inv.inv_display[x].get_sprite(self.base_items)] + " " +\
+                inv.inv_display[x].get_name(self.base_items) + "\n"
             if self.mode == "inventory_context" and (x+screen_pos) == cursor_pos:
                 for y in range(3):
                     output += self.sprites["utility"]["spacing"] + " "
@@ -243,9 +245,11 @@ class LegendGame(Game):
         output: str = ""
         output += self.sprites["items"][item.get_sprite(self.base_items)] + "\n"
         if isinstance(item, items.Weapon):
-            output += "**Name:** " + self.sprites["items"][item.get_weapon_class(self.base_items)] + " " + item.get_name(self.base_items) + "\n"
+            output += "**Name:** " + self.sprites["items"][item.get_weapon_class(self.base_items)] + " " +\
+                      item.get_name(self.base_items) + "\n"
         else:
-            output += "**Name:** " + self.sprites["items"][item.get_item_type(self.base_items)] + " " + item.get_name(self.base_items) + "\n"
+            output += "**Name:** " + self.sprites["items"][item.get_item_type(self.base_items)] + " " +\
+                      item.get_name(self.base_items) + "\n"
         output += "**Description:** " + item.get_description(self.base_items) + "\n"
         if isinstance(item, items.Weapon):
             output += "**Damage:** " + str(item.get_damage(self.base_items))
@@ -264,7 +268,7 @@ class LegendGame(Game):
                 item_render = self.render_item_info(self.opened_inventory.view[self.opened_inventory.cursor])
             else:
                 item_render = ""
-            #print(str(inv_render))
+            # print(str(inv_render))
             await self.update_screen(item_render, inv_render=inv_render)
         return
 
@@ -400,7 +404,7 @@ class LegendGame(Game):
                     if self.context_cursor > 0:
                         self.context_cursor -= 1
                     else:
-                        self.context_cursor = (context_count -1)
+                        self.context_cursor = (context_count - 1)
                 elif emoji == self.config["arrows"][2]:  # Down
                     self.confirm_drop = False
                     if self.context_cursor < (context_count - 1):

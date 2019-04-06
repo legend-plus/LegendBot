@@ -1,5 +1,7 @@
 {
   "token": "<YOUR TOKEN HERE>",
+  "ip": "<YOUR IP HERE>",
+  "port": 21321,
   "world_map": "aworld.bmp",
   "bump_map": "bworld.bmp",
   "portals": "default_portals.json",
