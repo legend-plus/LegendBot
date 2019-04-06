@@ -2,6 +2,7 @@
 venv/
 .idea/
 sprites/
+__pycache__/
 #Secret Config Files
 config.json
 portals.json
