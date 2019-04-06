@@ -8,6 +8,7 @@ from threading import Thread
 
 class ClientHandler(asyncore.dispatcher_with_send):
         def handle_read(self):
+            #Get Packet Length
             msg_len = self.recv(4)
             if not msg_len:
                 return
