@@ -1,7 +1,7 @@
-from packets import packet
+from packets.packet import Packet
 
 
-class PingPacket(packet.Packet):
+class PingPacket(Packet):
 
     name: str = "Ping"
     id: int = -1

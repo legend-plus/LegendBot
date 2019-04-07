@@ -7,10 +7,15 @@ import sys
 from threading import Thread
 
 import packets
-from packets import Packet, PingPacket, PongPacket
+from legend import Legend
+from packets import Packet, PingPacket, PongPacket, LoginPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
+        def __init__(self, sock=None, map=None, legend=None):
+            super().__init__(sock, map)
+            self.legend: Legend = legend
+
         def send_packet(self, packet: Packet):
             packet_id: int = packet.id
             data: bytes = packet.encode()
@@ -29,18 +34,24 @@ class ClientHandler(asyncore.dispatcher_with_send):
             packet_data: bytes = packet_contents[2:]
 
             packet = packets.decode(packet_id, packet_data)
+            packet_type = type(packet)
 
-            if type(packet) == PingPacket:
+            if packet_type == PingPacket:
                 packet: PingPacket
                 response = PongPacket(packet.msg)
                 self.send_packet(response)
+            elif packet_type == LoginPacket:
+                packet: LoginPacket
+                packet.access_token
+                # TODO: Use packet.access_token to verify user.
 
 
 class Server(asyncore.dispatcher):
-    def __init__(self, config, loop):
+    def __init__(self, config, loop, legend: Legend):
         print("Starting Server")
         asyncore.dispatcher.__init__(self)
         print("Init")
+        self.legend: Legend = legend
         self.config = config
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         print("Socket creating, setting reuse")
@@ -55,4 +66,4 @@ class Server(asyncore.dispatcher):
         if pair is not None:
             sock, addr = pair
             print("Connection from " + str(addr))
-            handler = ClientHandler(sock)
+            handler = ClientHandler(sock=sock, legend=self.legend)

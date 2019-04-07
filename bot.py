@@ -22,7 +22,7 @@ def create_bot(config, legend_game: legend.Legend):
     legend_bot = commands.Bot(command_prefix=commands.when_mentioned_or(config["prefix"]), description="Legend RPG Bot",
                               activity=discord.Game(name='Legend | +help'))
 
-    class LegendBot:
+    class LegendBot(commands.Cog):
 
         def __init__(self, bot: Bot, config, legend: legend.Legend):
             print("Init LegendBot")
@@ -154,12 +154,12 @@ def create_bot(config, legend_game: legend.Legend):
         async def open_inventory(self, og: DiscordGame):
             await og.open_inventory()
 
-        @legend_bot.event
+        @commands.Cog.listener(name='on_reaction_add')
         async def on_reaction_add(self, reaction: Reaction, user: User = None):
             if user and user.id in self.legend.games and self.legend.games[user.id].running:
                 await self.legend.games[user.id].react(reaction)
 
-        @legend_bot.event
+        @commands.Cog.listener(name='on_reaction_remove')
         async def on_reaction_remove(self, reaction: Reaction, user: User = None):
             if user and user.id in self.legend.games and self.legend.games[user.id].running:
                 await self.legend.games[user.id].react(reaction)

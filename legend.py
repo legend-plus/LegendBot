@@ -66,7 +66,7 @@ class Legend:
         print("Create server")
         self.running = True
         self.loop = loop
-        self.server = Server(self.config, loop)
+        self.server = Server(self.config, loop, self)
         self.server_thread = threading.Thread(target=asyncore.loop)
         self.server_thread.start()
         print("Server Thread Started")
