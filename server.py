@@ -1,6 +1,7 @@
 import asyncio
 import asyncore
 from bidict import bidict
+import requests
 import socket
 import struct
 import sys
@@ -8,7 +9,7 @@ from threading import Thread
 
 import packets
 from legend import Legend
-from packets import Packet, PingPacket, PongPacket, LoginPacket
+from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
@@ -42,8 +43,17 @@ class ClientHandler(asyncore.dispatcher_with_send):
                 self.send_packet(response)
             elif packet_type == LoginPacket:
                 packet: LoginPacket
-                packet.access_token
-                # TODO: Use packet.access_token to verify user.
+                headers = {"User-Agent": "Legend Plus login bot v0.1", "Authorization": "Bearer " + packet.access_token}
+                r = requests.get("https://discordapp.com/api/users/@me", headers=headers)
+                result = r.json()
+                if "id" in result and "message" not in result:
+                    # Successful login
+                    response = LoginResultPacket(1, result["id"])
+                    self.send_packet(response)
+                else:
+                    # Failed
+                    response = LoginResultPacket(0)
+                    self.send_packet(response)
 
 
 class Server(asyncore.dispatcher):

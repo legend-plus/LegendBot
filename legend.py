@@ -14,7 +14,6 @@ from battles import Battle
 from discordgame import DiscordGame
 from entities import Entity, NPC
 from legendutils import World
-from server import Server
 
 
 class Legend:
@@ -26,6 +25,7 @@ class Legend:
 
     def __init__(self, config):
         import bot
+        from server import Server
         self.config = config
         # Values from config
         self.sprites = {}
@@ -53,7 +53,7 @@ class Legend:
         self.games: Dict[str, DiscordGame] = {}
         self.load_config()
         self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
-        self.server = None
+        self.server: Server = None
         self.server_thread = None
         self.running = False
         print("Create bot")
@@ -63,6 +63,7 @@ class Legend:
         bot.create_bot(config, self)
 
     async def after_bot(self, loop):
+        from server import Server
         print("Create server")
         self.running = True
         self.loop = loop
