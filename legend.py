@@ -1,5 +1,7 @@
+import asyncio
 import asyncore
 import threading
+from asyncio import AbstractEventLoop
 
 from PIL import Image
 from pymongo import MongoClient
@@ -13,6 +15,7 @@ import requirements
 from battles import Battle
 from discordgame import DiscordGame
 from entities import Entity, NPC
+from game import Game
 from legendutils import World
 
 
@@ -50,11 +53,13 @@ class Legend:
         self.mongo = MongoClient()
         self.legend_db = self.mongo.legend
         self.users = self.legend_db.users
-        self.games: Dict[str, DiscordGame] = {}
+        self.games: Dict[str, Game] = {}
         self.load_config()
         self.world = World(self.world_map, self.bump_map, self.portals, self.entities)
         self.server: Server = None
         self.server_thread = None
+        self.server_loop_thread = None
+        self.server_loop: AbstractEventLoop = None
         self.running = False
         print("Create bot")
         self.bot = None
@@ -68,9 +73,16 @@ class Legend:
         self.running = True
         self.loop = loop
         self.server = Server(self.config, loop, self)
+        self.server_loop_thread = threading.Thread(target=self.run_loop)
+        self.server_loop_thread.start()
         self.server_thread = threading.Thread(target=asyncore.loop)
         self.server_thread.start()
         print("Server Thread Started")
+
+    def run_loop(self):
+        self.server_loop = asyncio.new_event_loop()
+        asyncio.new_event_loop().run_forever()
+        self.server_loop.run_forever()
 
     def load_config(self):
         with open("config/" + self.config["sprites"]) as sprites_f:
