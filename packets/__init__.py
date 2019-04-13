@@ -5,28 +5,36 @@ from bidict import bidict
 from packets.packet import Packet
 
 from packets.null_packet import NullPacket
-from packets.ping_packet import PingPacket
-from packets.pong_packet import PongPacket
-from packets.login_packet import LoginPacket
-from packets.login_result_packet import LoginResultPacket
-from packets.join_game_packet import JoinGamePacket
+
+from packets.client.ping_packet import PingPacket
+from packets.client.login_packet import LoginPacket
+from packets.client.join_game_packet import JoinGamePacket
+from packets.client.request_world_packet import RequestWorldPacket
+
+from packets.server.pong_packet import PongPacket
+from packets.server.login_result_packet import LoginResultPacket
+from packets.server.world_packet import WorldPacket
 
 packet_ids = bidict({
+    "request_world": -4,
     "join_game": -3,
     "login": -2,
     "ping": -1,
     "null": 0,
     "pong": 1,
-    "login_result": 2
+    "login_result": 2,
+    "world": 3
 })
 
 packets = {
+    -4: RequestWorldPacket,
     -3: JoinGamePacket,
     -2: LoginPacket,
     -1: PingPacket,
     0: Packet,
     1: PongPacket,
-    2: LoginResultPacket
+    2: LoginResultPacket,
+    3: WorldPacket
 }
 
 

@@ -12,7 +12,8 @@ import typing
 import packets
 from directgame import DirectGame
 from legend import Legend
-from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket
+from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket, RequestWorldPacket, \
+    WorldPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
@@ -78,7 +79,19 @@ class ClientHandler(asyncore.dispatcher_with_send):
                 self.wait(self.legend.games[self.user_id].start)
             else:
                 pass
-
+        elif packet_type == RequestWorldPacket:
+            packet: RequestWorldPacket
+            if self.logged_in:
+                response = WorldPacket(self.legend.world.height,
+                                       self.legend.world.width,
+                                       self.legend.world.world_bytes,
+                                       self.legend.world.world_byte_size,
+                                       self.legend.world.bump_map,
+                                       self.legend.world.bump_byte_size)
+                self.send_packet(response)
+            else:
+                pass
+    
     def wait(self, func: typing.Callable, *args):
         future = asyncio.run_coroutine_threadsafe(func(*args), self.legend.server_loop)
         return future.result()
