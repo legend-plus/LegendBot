@@ -1,3 +1,4 @@
+import struct
 from datetime import datetime
 import uuid
 from typing import List, Dict, Optional, Tuple
@@ -42,6 +43,12 @@ class World:
         self.bump_map: np.ndarray = bump_map
         self.portals: Dict[Tuple[int, int], Dict[str, int]] = portals
         self.entities: Dict[Tuple[int, int], Entity] = entities
+        self.world_bytes: bytes = b''
+        self.world_byte_size: int = 1
+        self.get_world_bytes()
+        self.bump_bytes: bytes = b''
+        self.bump_byte_size: int = 1
+        self.get_bump_bytes()
 
     def get(self, min_x: int, max_x: int, min_y: int, max_y: int) -> np.ndarray:
         return self.world[min_y:max_y, min_x:max_x]
@@ -73,12 +80,60 @@ class World:
                entities: Dict[Tuple[int, int], entities.Entity] = None):
         if world is not None:
             self.world = world
+            self.get_world_bytes()
         if bump_map is not None:
             self.bump_map = bump_map
+            self.get_bump_bytes()
         if portals is not None:
             self.portals = portals
         if entities is not None:
             self.entities = entities
+
+    def get_world_bytes(self):
+        output: bytes = ""
+        max_value: int = self.world.max()
+        if max_value <= (2**8) - 1:
+            self.world_byte_size = 1
+        elif max_value <= (2**16) - 1:
+            self.world_byte_size = 2
+        elif max_value <= (2**32) - 1:
+            self.world_byte_size = 4
+        else:
+            return
+        for y in range(self.height):
+            for x in range(self.width):
+                fmt = ">"
+                if self.world_byte_size == 1:
+                    fmt += "B"
+                elif self.world_byte_size == 2:
+                    fmt += "H"
+                elif self.world_byte_size == 4:
+                    fmt += "L"
+                output += struct.pack(fmt, self.world[y, x])
+        self.world_bytes = output
+
+    def get_bump_bytes(self):
+        output: bytes = ""
+        max_value: int = self.bump_map.max()
+        if max_value <= (2**8) - 1:
+            self.bump_byte_size = 1
+        elif max_value <= (2**16) - 1:
+            self.bump_byte_size = 2
+        elif max_value <= (2**32) - 1:
+            self.bump_byte_size = 4
+        else:
+            return
+        for y in range(self.height):
+            for x in range(self.width):
+                fmt = ">"
+                if self.bump_byte_size == 1:
+                    fmt += "B"
+                elif self.bump_byte_size == 2:
+                    fmt += "H"
+                elif self.bump_byte_size == 4:
+                    fmt += "L"
+                output += struct.pack(fmt, self.bump_map[y, x])
+        self.bump_bytes = output
 
 
 def to_hex(color_tuple: (int, int, int)) -> str:
