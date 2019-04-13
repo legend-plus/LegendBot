@@ -1,3 +1,4 @@
+import numpy
 import struct
 from datetime import datetime
 import uuid
@@ -90,7 +91,7 @@ class World:
             self.entities = entities
 
     def get_world_bytes(self):
-        output: bytes = ""
+        output: bytes = b''
         max_value: int = self.world.max()
         if max_value <= (2**8) - 1:
             self.world_byte_size = 1
@@ -113,7 +114,7 @@ class World:
         self.world_bytes = output
 
     def get_bump_bytes(self):
-        output: bytes = ""
+        output: bytes = b''
         max_value: int = self.bump_map.max()
         if max_value <= (2**8) - 1:
             self.bump_byte_size = 1
@@ -134,6 +135,52 @@ class World:
                     fmt += "L"
                 output += struct.pack(fmt, self.bump_map[y, x])
         self.bump_bytes = output
+
+    @classmethod
+    def decode(cls, height: int, width: int, world: bytes, world_word_size: int, bump_world: bytes, bump_word_size: int):
+        output_world = []
+        output_row = []
+        x, y = (0, 0)
+        for pixel in range(0, len(world), world_word_size):
+            x += 1
+            fmt = ">"
+            if world_word_size == 1:
+                fmt += "B"
+            elif world_word_size == 2:
+                fmt += "H"
+            elif world_word_size == 4:
+                fmt += "L"
+            pixel_value = struct.unpack(fmt, world[pixel:pixel+world_word_size])[0]
+            output_row.append(pixel_value)
+            if x == width:
+                y += 1
+                x = 0
+                output_world.append(output_row)
+                output_row = []
+        output_world = numpy.array(output_world)
+
+        x, y = (0, 0)
+        output_bump_world = []
+        output_row = []
+        for pixel in range(0, len(bump_world), bump_word_size):
+            x += 1
+            fmt = ">"
+            if bump_word_size == 1:
+                fmt += "B"
+            elif bump_word_size == 2:
+                fmt += "H"
+            elif bump_word_size == 4:
+                fmt += "L"
+            pixel_value = struct.unpack(fmt, world[pixel:pixel + bump_word_size])[0]
+            output_row.append(pixel_value)
+            if x == width:
+                y += 1
+                x = 0
+                output_bump_world.append(output_row)
+                output_row = []
+        output_bump_world = numpy.array(output_bump_world)
+
+        return cls(output_world, output_bump_world, {}, {})
 
 
 def to_hex(color_tuple: (int, int, int)) -> str:

@@ -86,12 +86,12 @@ class ClientHandler(asyncore.dispatcher_with_send):
                                        self.legend.world.width,
                                        self.legend.world.world_bytes,
                                        self.legend.world.world_byte_size,
-                                       self.legend.world.bump_map,
+                                       self.legend.world.bump_bytes,
                                        self.legend.world.bump_byte_size)
                 self.send_packet(response)
             else:
                 pass
-    
+
     def wait(self, func: typing.Callable, *args):
         future = asyncio.run_coroutine_threadsafe(func(*args), self.legend.server_loop)
         return future.result()
