@@ -13,7 +13,7 @@ import packets
 from directgame import DirectGame
 from legend import Legend
 from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket, RequestWorldPacket, \
-    WorldPacket
+    WorldPacket, ReadyPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
@@ -22,6 +22,8 @@ class ClientHandler(asyncore.dispatcher_with_send):
         self.legend: Legend = legend
         self.logged_in: bool = False
         self.user_id: str = None
+        ready = ReadyPacket()
+        self.send_packet(ready)
 
     def send_packet(self, packet: Packet):
         packet_id: int = packet.id
@@ -47,6 +49,7 @@ class ClientHandler(asyncore.dispatcher_with_send):
             packet: PingPacket
             response = PongPacket(packet.msg)
             self.send_packet(response)
+            print("PONG \"" + packet.msg + "\"")
         elif packet_type == LoginPacket:
             packet: LoginPacket
             if not self.logged_in:

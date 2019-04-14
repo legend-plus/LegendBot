@@ -13,6 +13,7 @@ from packets.client.request_world_packet import RequestWorldPacket
 
 from packets.server.pong_packet import PongPacket
 from packets.server.login_result_packet import LoginResultPacket
+from packets.server.ready_packet import ReadyPacket
 from packets.server.world_packet import WorldPacket
 
 packet_ids = bidict({
@@ -23,7 +24,8 @@ packet_ids = bidict({
     "null": 0,
     "pong": 1,
     "login_result": 2,
-    "world": 3
+    "world": 3,
+    "ready": 4
 })
 
 packets = {
@@ -34,7 +36,8 @@ packets = {
     0: Packet,
     1: PongPacket,
     2: LoginResultPacket,
-    3: WorldPacket
+    3: WorldPacket,
+    4: ReadyPacket
 }
 
 
