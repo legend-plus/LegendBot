@@ -81,7 +81,6 @@ class Legend:
 
     def run_loop(self):
         self.server_loop = asyncio.new_event_loop()
-        asyncio.new_event_loop().run_forever()
         self.server_loop.run_forever()
 
     def load_config(self):

@@ -22,7 +22,7 @@ class ClientHandler(asyncore.dispatcher_with_send):
         self.legend: Legend = legend
         self.logged_in: bool = False
         self.user_id: str = None
-        ready = ReadyPacket()
+        ready = ReadyPacket(0)
         self.send_packet(ready)
 
     def send_packet(self, packet: Packet):
@@ -44,6 +44,8 @@ class ClientHandler(asyncore.dispatcher_with_send):
 
         packet = packets.decode(packet_id, packet_data)
         packet_type = type(packet)
+
+        # print("Received id " + str(packet_id) + "(" + str(packet_type) + ") len " + str(msg_len))
 
         if packet_type == PingPacket:
             packet: PingPacket
@@ -76,10 +78,12 @@ class ClientHandler(asyncore.dispatcher_with_send):
             packet: JoinGamePacket
             if self.logged_in:
                 if self.user_id in self.legend.games:
-                    self.wait(self.legend.games[self.user_id].disconnect)
+                    self.wait(self.legend.games[self.user_id].disconnect())
                     self.legend.games.pop(self.user_id)
                 self.legend.games[self.user_id] = DirectGame(self)
-                self.wait(self.legend.games[self.user_id].start)
+                self.wait(self.legend.games[self.user_id].start())
+                ready = ReadyPacket(1)
+                self.send_packet(ready)
             else:
                 pass
         elif packet_type == RequestWorldPacket:
@@ -95,8 +99,8 @@ class ClientHandler(asyncore.dispatcher_with_send):
             else:
                 pass
 
-    def wait(self, func: typing.Callable, *args):
-        future = asyncio.run_coroutine_threadsafe(func(*args), self.legend.server_loop)
+    def wait(self, func):
+        future = asyncio.run_coroutine_threadsafe(func, self.legend.server_loop)
         return future.result()
 
 
