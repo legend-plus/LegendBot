@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
+import copy
+from math import hypot
 
+import items
+import legendutils
 from entities import Entity
+from inventory import Inventory
+
 
 class Game(Entity):
     ready: bool
@@ -11,24 +17,69 @@ class Game(Entity):
     dialogue_buffer: list
     gui_description: str
 
-    def __init__(self, pos_x: int, pos_y: int):
+    def __init__(self, pos_x: int, pos_y: int, legend, username: str, user_id: str):
         super().__init__("player", pos_x, pos_y, "")
-        pass
 
-    @abstractmethod
-    async def update_screen(self, render: str) -> None:
-        pass
+        from legend import Legend
+        self.legend: Legend = legend
 
-    @abstractmethod
+        self.running: bool = False
+        self.started: bool = False
+
+        self.facing: int = 0
+
+        self.username = username
+        self.user_id = user_id
+        user_data = self.legend.users.find_one({"user": str(user_id)})
+        if not user_data:
+            user_data = copy.deepcopy(self.legend.config["default_user"])
+            user_data["user"] = str(user_id)
+            self.legend.users.insert_one(user_data)
+        self.data = user_data
+        inv = [items.from_dict(inv_item, self.legend.base_items) for inv_item in self.data["inventory"]]
+        self.player_inventory = Inventory(inv, self.legend.base_items, self.legend.config)
+        self.data["inventory"] = self.player_inventory
+        self.opened_inventory: Inventory = Inventory([], self.legend.base_items, self.legend.config)
+
+    def chat(self, msg):
+        for g in self.legend.games:
+            dist = hypot(self.legend.games[g].data["pos_x"] - self.data["pos_x"],
+                         self.legend.games[g].data["pos_y"] - self.data["pos_y"])
+            if dist <= self.legend.chat_radius:
+                self.legend.games[g].add_msg(legendutils.ChatMessage(self.username,
+                                                                     msg), self.data["pos_x"], self.data["pos_y"])
+
     def move(self, x: int, y: int, force: bool = False) -> bool:
-        pass
+        if self.running and self.legend.world.height > y >= 0 and self.legend.world.width > x >= 0:
+            if force or not self.legend.world.collide(x, y):
+                if self.legend.world.get_portal(x, y):
+                    destination_portal = self.legend.world.get_portal(x, y)
+                    self.data["pos_x"] = destination_portal["to_x"]
+                    self.data["pos_y"] = destination_portal["to_y"]
+                else:
+                    if self.legend.world.can_trigger_encounters(x, y):
+                        self.data["pos_x"] = x
+                        self.data["pos_y"] = y
+                        pass  # encounter =
+                    else:
+                        self.data["pos_x"] = x
+                        self.data["pos_y"] = y
+                return True
+            else:
+                if self.legend.world.get_entity(x, y):
+                    entity = self.legend.world.get_entity(x, y)
+                    if entity.interactable:
+                        entity.interact(self)
+                return False
+        else:
+            return False
 
     @abstractmethod
     def gui_interact(self, choice: int) -> None:
         pass
 
     @abstractmethod
-    def add_msg(self, msg) -> None:
+    def add_msg(self, msg: legendutils.ChatMessage, x, y) -> None:
         pass
 
     @abstractmethod

@@ -16,12 +16,11 @@ class Entity:
 
 
 class NPC(Entity):
-    from game import Game
 
     def __init__(self, pos_x: int, pos_y: int, tile: str, dialogue: interactions.Dialogue):
         entity_type = "npc"
         super().__init__(entity_type, pos_x, pos_y, tile, True)
         self.dialogue: interactions.Dialogue = dialogue
 
-    def interact(self, session: Game):
+    def interact(self, session):
         self.dialogue.interact(session)

@@ -50,6 +50,7 @@ def create_bot(config, legend_game: legend.Legend):
             self.h_screen = self.config["screen_height"]
 
         def reload_config(self):
+            self.legend.reload_config()
             self.load_config()
 
         @commands.command()
@@ -65,28 +66,26 @@ def create_bot(config, legend_game: legend.Legend):
             if ctx.author.id in self.legend.games:
                 await self.legend.games[ctx.author.id].disconnect()
                 self.legend.games.pop(ctx.author.id)
-            self.legend.games[ctx.author.id] = DiscordGame(ctx, self.config, self.legend.users, self.legend.world,
-                                                           self.legend.games, self.bot, self.legend.sprites,
-                                                           self.legend.dialogue, self.legend.base_items)
+            self.legend.games[ctx.author.id] = DiscordGame(ctx, self.legend.users, self.bot, self.legend)
             await self.legend.games[ctx.author.id].start()
 
         @commands.command()
         async def say(self, ctx, *, msg):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
-                await self.chat(ctx, msg, self.legend.games[ctx.author.id])
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
+                self.legend.games[ctx.author.id].chat(msg)
             else:
                 await ctx.send("You can only use this command ingame!")
 
         @commands.command()
         async def s(self, ctx, *, msg):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
-                await self.chat(ctx, msg, self.legend.games[ctx.author.id])
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
+                self.legend.games[ctx.author.id].chat(msg)
             else:
                 await ctx.send("You can only use this command ingame!")
 
         @commands.command()
         async def inventory(self, ctx, ):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
                 if self.legend.games[ctx.author.id].mode == "world":
                     await self.open_inventory(self.legend.games[ctx.author.id])
                 else:
@@ -96,7 +95,7 @@ def create_bot(config, legend_game: legend.Legend):
 
         @commands.command()
         async def i(self, ctx):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
                 if self.legend.games[ctx.author.id].mode == "world":
                     await self.open_inventory(self.legend.games[ctx.author.id])
                 else:
@@ -106,7 +105,7 @@ def create_bot(config, legend_game: legend.Legend):
 
         @commands.command()
         async def inv(self, ctx):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
                 if self.legend.games[ctx.author.id].mode == "world":
                     await self.open_inventory(self.legend.games[ctx.author.id])
                 else:
@@ -116,7 +115,7 @@ def create_bot(config, legend_game: legend.Legend):
 
         @commands.command()
         async def tp(self, ctx, x: int, y: int):
-            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running:
+            if ctx.author.id in self.legend.games and self.legend.games[ctx.author.id].running and type(self.legend.games[ctx.author.id]) == DiscordGame:
                 self.legend.games[ctx.author.id].move(x, y, force=True)
             else:
                 await ctx.send("You can only use this command ingame!")
@@ -143,14 +142,6 @@ def create_bot(config, legend_game: legend.Legend):
             else:
                 await ctx.send("You do not have permissions!")
 
-        async def chat(self, ctx, msg, og):
-            for g in self.legend.games:
-                dist = hypot(self.legend.games[g].data["pos_x"] - og.data["pos_x"],
-                             self.legend.games[g].data["pos_y"] - og.data["pos_y"])
-                if dist <= self.legend.chat_radius:
-                    self.legend.games[g].add_msg(legendutils.ChatMessage(ctx.author.name, ctx.author.discriminator,
-                                                                         msg))
-
         async def open_inventory(self, og: DiscordGame):
             await og.open_inventory()
 
@@ -172,8 +163,8 @@ def create_bot(config, legend_game: legend.Legend):
                     # print("From " + str(offset) + " to " + str(floor(timing[0] * 10)) + " @ " + str(timing[1]))
                     offset = floor(timing[0] * 10)
                     removals = []
-                    for user_id in self.legend.games:
-                        if self.legend.games[user_id].offset == offset and self.legend.games[user_id].running:
+                    for user_id in self.legend.games.copy():
+                        if type(self.legend.games[user_id]) == DiscordGame and self.legend.games[user_id].offset == offset and self.legend.games[user_id].running:
                             session = self.legend.games[user_id]
                             cur_time = time.time()
                             if (cur_time - session.timeout) > self.config["timeout"]:

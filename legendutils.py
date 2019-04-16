@@ -10,9 +10,8 @@ from entities import Entity
 
 
 class ChatMessage:
-    def __init__(self, author: str, discriminator: str, message: str):
+    def __init__(self, author: str, message: str):
         self.author: str = author
-        self.discriminator: str = discriminator
         self.message: str = message[0:140]
         self.time: datetime = datetime.utcnow()
         self.uuid: uuid = uuid.uuid4().hex

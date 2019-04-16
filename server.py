@@ -13,7 +13,7 @@ import packets
 from directgame import DirectGame
 from legend import Legend
 from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket, RequestWorldPacket, \
-    WorldPacket, ReadyPacket
+    WorldPacket, ReadyPacket, MovePacket, PlayerPositionPacket, MoveAndFacePacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
@@ -22,6 +22,9 @@ class ClientHandler(asyncore.dispatcher_with_send):
         self.legend: Legend = legend
         self.logged_in: bool = False
         self.user_id: str = None
+        self.username: str = None
+        self.game = None
+        self.running = True
         ready = ReadyPacket(0)
         self.send_packet(ready)
 
@@ -65,6 +68,7 @@ class ClientHandler(asyncore.dispatcher_with_send):
                     # Successful login
                     response = LoginResultPacket(1, result["id"])
                     self.logged_in = True
+                    self.username = result["username"] + "#" + result["discriminator"]
                     self.user_id = result["id"]
                     self.send_packet(response)
                 else:
@@ -80,15 +84,14 @@ class ClientHandler(asyncore.dispatcher_with_send):
                 if self.user_id in self.legend.games:
                     self.wait(self.legend.games[self.user_id].disconnect())
                     self.legend.games.pop(self.user_id)
-                self.legend.games[self.user_id] = DirectGame(self)
+                self.legend.games[self.user_id] = DirectGame(self, self.legend, self.user_id, self.username)
                 self.wait(self.legend.games[self.user_id].start())
-                ready = ReadyPacket(1)
-                self.send_packet(ready)
+                self.game = self.legend.games[self.user_id]
             else:
                 pass
         elif packet_type == RequestWorldPacket:
             packet: RequestWorldPacket
-            if self.logged_in:
+            if self.game.running:
                 response = WorldPacket(self.legend.world.height,
                                        self.legend.world.width,
                                        self.legend.world.world_bytes,
@@ -98,6 +101,22 @@ class ClientHandler(asyncore.dispatcher_with_send):
                 self.send_packet(response)
             else:
                 pass
+        elif packet_type == MovePacket or packet_type == MoveAndFacePacket:
+            packet: MovePacket
+            if self.game.running:
+                self.game.move(packet.x, packet.y)
+                if self.game.data["pos_x"] != packet.x or self.game.data["pos_y"] != packet.y:
+                    position_packet = PlayerPositionPacket(self.game.data["pos_x"], self.game.data["pos_y"])
+                    self.send_packet(position_packet)
+                if packet_type == MoveAndFacePacket:
+                    packet: MoveAndFacePacket
+                    self.game.facing = packet.facing
+
+    def handle_close(self):
+        self.running = False
+        if self.logged_in and self.user_id in self.legend.games and type(self.legend.games[self.user_id]) == DirectGame:
+            self.wait(self.legend.games[self.user_id].disconnect("Timeout"))
+        super().handle_close()
 
     def wait(self, func):
         future = asyncio.run_coroutine_threadsafe(func, self.legend.server_loop)
@@ -112,7 +131,6 @@ class Server(asyncore.dispatcher):
         self.legend: Legend = legend
         self.config = config
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        print("Socket creating, setting reuse")
         self.set_reuse_addr()
         print("Binding server to " + self.config["ip"] + ":" + str(self.config["port"]))
         self.bind((self.config["ip"], self.config["port"]))
