@@ -10,11 +10,15 @@ from entities import Entity
 
 
 class ChatMessage:
-    def __init__(self, author: str, message: str):
+    def __init__(self, author: str, message: str, user_id: str, msg_uuid: uuid = None):
         self.author: str = author
         self.message: str = message[0:140]
         self.time: datetime = datetime.utcnow()
-        self.uuid: uuid = uuid.uuid4().hex
+        if msg_uuid is None:
+            self.uuid: uuid = uuid.uuid4().hex
+        else:
+            self.uuid = msg_uuid
+        self.user_id = user_id
 
     def __eq__(self, other) -> bool:
         if isinstance(other, ChatMessage) and other.uuid == self.uuid:

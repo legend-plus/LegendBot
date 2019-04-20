@@ -16,8 +16,8 @@ class MoveAndFacePacket(Packet):
 
     @classmethod
     def decode(cls, data: bytes):
-        x, y, facing = struct.unpack(">LLB", data)
+        x, y, facing = struct.unpack(">llB", data)
         return cls(x, y, facing)
 
     def encode(self) -> bytes:
-        return struct.pack(">LLB", self.x, self.y, self.facing)
+        return struct.pack(">llB", self.x, self.y, self.facing)

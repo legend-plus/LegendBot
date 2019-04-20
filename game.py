@@ -47,7 +47,7 @@ class Game(Entity):
                          self.legend.games[g].data["pos_y"] - self.data["pos_y"])
             if dist <= self.legend.chat_radius:
                 self.legend.games[g].add_msg(legendutils.ChatMessage(self.username,
-                                                                     msg), self.data["pos_x"], self.data["pos_y"])
+                                                                     msg, self.user_id), self.data["pos_x"], self.data["pos_y"])
 
     def move(self, x: int, y: int, force: bool = False) -> bool:
         if self.running and self.legend.world.height > y >= 0 and self.legend.world.width > x >= 0:

@@ -15,8 +15,8 @@ class PlayerPositionPacket(Packet):
 
     @classmethod
     def decode(cls, data: bytes):
-        x, y = struct.unpack(">LL", data)
+        x, y = struct.unpack(">ll", data)
         return cls(x, y)
 
     def encode(self) -> bytes:
-        return struct.pack(">LL", self.x, self.y)
+        return struct.pack(">ll", self.x, self.y)
