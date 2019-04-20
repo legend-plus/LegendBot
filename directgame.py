@@ -23,6 +23,10 @@ class DirectGame(Game):
             pass
 
     async def disconnect(self, reason: str = None):
+        if self.running:
+            self.data["inventory"] = [vars(inv_item) for inv_item in self.data["inventory"].items]
+            self.legend.users.update_one({"user": str(self.user_id)}, {"$set": self.data})
+            self.running = False
         self.running = False
         if self.connection.running:
             disconnect_packet = DisconnectPacket(reason)
