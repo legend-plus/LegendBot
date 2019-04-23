@@ -110,7 +110,7 @@ class DiscordGame(Game):
                         render += self.legend.sprites["characters"]["rowan"]["other"][self.get_char_tile(view, vx, vy)][self.facings[positions[(abs_x, abs_y)][1]]]
                 elif self.legend.world.get_entity(abs_x, abs_y):
                     entity = self.legend.world.get_entity(abs_x, abs_y)
-                    render += self.legend.sprites["entities"][entity.tile]
+                    render += self.legend.sprites["entities"][entity.sprite + "_" + self.facings[entity.facing]]
                 else:
                     render += self.legend.sprites["tiles"][view.view[vy][vx]]["emoji"]
         return render[1:]

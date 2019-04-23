@@ -4,6 +4,7 @@ from bidict import bidict
 
 from packets.client.move_and_face_packet import MoveAndFacePacket
 from packets.client.move_packet import MovePacket
+from packets.client.send_message_packet import SendMessagePacket
 from packets.packet import Packet
 
 from packets.null_packet import NullPacket
@@ -14,6 +15,7 @@ from packets.client.join_game_packet import JoinGamePacket
 from packets.client.request_world_packet import RequestWorldPacket
 from packets.server.chat_packet import ChatPacket
 from packets.server.disconnect_packet import DisconnectPacket
+from packets.server.entity_packet import EntityPacket
 from packets.server.player_position_packet import PlayerPositionPacket
 
 from packets.server.pong_packet import PongPacket
@@ -22,6 +24,7 @@ from packets.server.ready_packet import ReadyPacket
 from packets.server.world_packet import WorldPacket
 
 packet_ids = bidict({
+    "send_message": -7,
     "move_and_face": -6,
     "move": -5,
     "request_world": -4,
@@ -35,10 +38,12 @@ packet_ids = bidict({
     "ready": 4,
     "player_position": 5,
     "disconnect": 6,
-    "chat": 7
+    "chat": 7,
+    "entity": 8
 })
 
 packets = {
+    -7: SendMessagePacket,
     -6: MoveAndFacePacket,
     -5: MovePacket,
     -4: RequestWorldPacket,
@@ -52,7 +57,8 @@ packets = {
     4: ReadyPacket,
     5: PlayerPositionPacket,
     6: DisconnectPacket,
-    7: ChatPacket
+    7: ChatPacket,
+    8: EntityPacket
 }
 
 

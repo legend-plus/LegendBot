@@ -1,5 +1,8 @@
 import asyncio
 import asyncore
+import threading
+import time
+
 from bidict import bidict
 import requests
 import socket
@@ -13,7 +16,7 @@ import packets
 from directgame import DirectGame
 from legend import Legend
 from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket, RequestWorldPacket, \
-    WorldPacket, ReadyPacket, MovePacket, PlayerPositionPacket, MoveAndFacePacket
+    WorldPacket, ReadyPacket, MovePacket, PlayerPositionPacket, MoveAndFacePacket, SendMessagePacket, EntityPacket
 
 
 class ClientHandler(asyncore.dispatcher_with_send):
@@ -111,6 +114,10 @@ class ClientHandler(asyncore.dispatcher_with_send):
                 if packet_type == MoveAndFacePacket:
                     packet: MoveAndFacePacket
                     self.game.facing = packet.facing
+        elif packet_type == SendMessagePacket:
+            packet: SendMessagePacket
+            if self.game.running:
+                self.game.chat(packet.msg)
 
     def handle_close(self):
         self.running = False
@@ -134,6 +141,8 @@ class Server(asyncore.dispatcher):
         self.set_reuse_addr()
         print("Binding server to " + self.config["ip"] + ":" + str(self.config["port"]))
         self.bind((self.config["ip"], self.config["port"]))
+        self.tick_thread: Thread = threading.Thread(target=self.tick)
+        self.tick_thread.start()
         self.listen(10)
 
     def handle_accept(self):
@@ -143,3 +152,30 @@ class Server(asyncore.dispatcher):
             sock, addr = pair
             print("Connection from " + str(addr))
             handler = ClientHandler(sock=sock, legend=self.legend)
+
+    def tick(self):
+        while True:
+            for game in self.legend.games.values():
+                if isinstance(game, DirectGame):
+                    min_y: int = max(game.data["pos_y"] - self.legend.config["entity_radius"], 0)
+                    max_y: int = min(game.data["pos_y"] + self.legend.config["entity_radius"], self.legend.height-1)
+                    for y in range(min_y, max_y):
+                        min_x: int = max(game.data["pos_x"] - self.legend.config["entity_radius"], 0)
+                        max_x: int = min(game.data["pos_x"] + self.legend.config["entity_radius"],
+                                         self.legend.width - 1)
+                        for x in range(min_x, max_x):
+                            pos: typing.Tuple[int, int] = (y, x)
+                            if pos in self.legend.entities:
+                                entity = self.legend.entities[pos]
+                                if entity.uuid not in game.entity_cache:
+                                    # Send entity information
+                                    entity_packet = EntityPacket(entity, x, y)
+                                    game.connection.send_packet(entity_packet)
+                                    game.entity_cache.add(entity.uuid)
+                                    pass
+                                else:
+                                    # Entities don't change often (Outside battle), so we don't need to spam
+                                    # The client with their positions every tick
+                                    # If we need to invalidate or update the cache we can
+                                    pass
+            time.sleep(1 / self.legend.config["tick_rate"])

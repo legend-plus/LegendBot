@@ -1,6 +1,7 @@
 import asyncio
 import asyncore
 import threading
+import uuid
 from asyncio import AbstractEventLoop
 
 from PIL import Image
@@ -44,6 +45,7 @@ class Legend:
         self.bump_map: numpy.ndarray = None
         self.portals: Dict[Tuple[int, int], Dict[str, int]] = {}
         self.entities: Dict[Tuple[int, int], Entity] = {}
+        self.entity_ids: Dict[uuid.UUID, Entity] = {}
         self.dialogue: Dict[str, interactions.Dialogue] = {}
         self.base_items: Dict[str, dict] = {}
         self.messages = {}
@@ -187,11 +189,13 @@ class Legend:
             entity_json = json.load(f)
 
         self.entities.clear()
+        self.entity_ids.clear()
 
         for entity in entity_json:
             if entity["type"] == "npc":
-                self.entities[(entity["pos_x"], entity["pos_y"])] = \
-                    NPC(entity["pos_x"], entity["pos_y"], entity["tile"], self.dialogue[entity["dialogue"]])
+                npc_entity = NPC(entity["pos_x"], entity["pos_y"], entity["facing"], entity["sprite"], self.dialogue[entity["dialogue"]])
+                self.entities[(entity["pos_x"], entity["pos_y"])] = npc_entity
+                self.entity_ids[npc_entity.uuid] = npc_entity
         # Turn it into a numpy array for 2d calculations and speed.
         self.world_map = numpy.array(self.world_map)
         self.bump_map = numpy.array(self.bump_map)

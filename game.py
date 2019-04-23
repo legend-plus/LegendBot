@@ -18,15 +18,13 @@ class Game(Entity):
     gui_description: str
 
     def __init__(self, pos_x: int, pos_y: int, legend, username: str, user_id: str):
-        super().__init__("player", pos_x, pos_y, "")
+        super().__init__("player", pos_x, pos_y, 0, "")
 
         from legend import Legend
         self.legend: Legend = legend
 
         self.running: bool = False
         self.started: bool = False
-
-        self.facing: int = 0
 
         self.username = username
         self.user_id = user_id

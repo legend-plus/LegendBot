@@ -1,3 +1,6 @@
+import uuid
+from typing import Set
+
 from game import Game
 from packets import ReadyPacket, PlayerPositionPacket, DisconnectPacket, ChatPacket
 
@@ -5,8 +8,9 @@ from packets import ReadyPacket, PlayerPositionPacket, DisconnectPacket, ChatPac
 class DirectGame(Game):
     def __init__(self, connection, legend, user_id, username):
         import server
-        super().__init__(0, 0, legend, user_id, username)
+        super().__init__(0, 0, legend, username, user_id)
         self.connection: server.ClientHandler = connection
+        self.entity_cache: Set[uuid.UUID] = set()
 
     async def start(self):
         self.running = True
