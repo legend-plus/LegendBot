@@ -15,7 +15,9 @@ from packets.client.join_game_packet import JoinGamePacket
 from packets.client.request_world_packet import RequestWorldPacket
 from packets.server.chat_packet import ChatPacket
 from packets.server.disconnect_packet import DisconnectPacket
+from packets.server.entity_move_packet import EntityMovePacket
 from packets.server.entity_packet import EntityPacket
+from packets.server.invalidate_cache_packet import InvalidateCachePacket
 from packets.server.player_position_packet import PlayerPositionPacket
 
 from packets.server.pong_packet import PongPacket
@@ -39,7 +41,9 @@ packet_ids = bidict({
     "player_position": 5,
     "disconnect": 6,
     "chat": 7,
-    "entity": 8
+    "entity": 8,
+    "entity_move": 9,
+    "invalidate_cache": 10
 })
 
 packets = {
@@ -58,7 +62,9 @@ packets = {
     5: PlayerPositionPacket,
     6: DisconnectPacket,
     7: ChatPacket,
-    8: EntityPacket
+    8: EntityPacket,
+    9: EntityMovePacket,
+    10: InvalidateCachePacket
 }
 
 

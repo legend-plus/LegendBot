@@ -107,13 +107,13 @@ class ClientHandler(asyncore.dispatcher_with_send):
         elif packet_type == MovePacket or packet_type == MoveAndFacePacket:
             packet: MovePacket
             if self.game.running:
+                if packet_type == MoveAndFacePacket:
+                    packet: MoveAndFacePacket
+                    self.game.facing = packet.facing
                 self.game.move(packet.x, packet.y)
                 if self.game.data["pos_x"] != packet.x or self.game.data["pos_y"] != packet.y:
                     position_packet = PlayerPositionPacket(self.game.data["pos_x"], self.game.data["pos_y"])
                     self.send_packet(position_packet)
-                if packet_type == MoveAndFacePacket:
-                    packet: MoveAndFacePacket
-                    self.game.facing = packet.facing
         elif packet_type == SendMessagePacket:
             packet: SendMessagePacket
             if self.game.running:
@@ -178,4 +178,15 @@ class Server(asyncore.dispatcher):
                                     # The client with their positions every tick
                                     # If we need to invalidate or update the cache we can
                                     pass
+                    for other_game in self.legend.games.values():
+                        # TODO: This is O(n^2), can I improve that?
+                        if game.data["pos_x"] - self.legend.config["entity_radius"] < other_game.data["pos_x"] < \
+                                game.data["pos_x"] + self.legend.config["entity_radius"] and \
+                                game.data["pos_y"] - self.legend.config["entity_radius"] < other_game.data["pos_y"] < \
+                                game.data["pos_y"] + self.legend.config["entity_radius"]:
+                            if other_game != game and other_game.uuid not in game.entity_cache:
+                                entity_packet = EntityPacket(other_game, other_game.data["pos_x"],
+                                                             other_game.data["pos_y"])
+                                game.connection.send_packet(entity_packet)
+                                game.entity_cache.add(other_game.uuid)
             time.sleep(1 / self.legend.config["tick_rate"])

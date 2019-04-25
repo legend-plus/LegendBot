@@ -103,10 +103,11 @@ class DiscordGame(Game):
                 if (abs_x, abs_y) in positions:
                     if positions[(abs_x, abs_y)] == (self.user_id, self.facing):
                         if not self.legend.world.collide(abs_x, abs_y):
-                            render += self.legend.sprites["characters"]["rowan"]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
+                            render += self.legend.sprites["characters"][self.sprite]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
                         else:
-                            render += self.legend.sprites["characters"]["rowan"]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
+                            render += self.legend.sprites["characters"][self.sprite]["player"][self.get_char_tile(view, vx, vy)][self.facings[self.facing]]
                     else:
+                        # TODO: Replace sprites of other users based on their sprite
                         render += self.legend.sprites["characters"]["rowan"]["other"][self.get_char_tile(view, vx, vy)][self.facings[positions[(abs_x, abs_y)][1]]]
                 elif self.legend.world.get_entity(abs_x, abs_y):
                     entity = self.legend.world.get_entity(abs_x, abs_y)

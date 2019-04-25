@@ -21,7 +21,8 @@
     "pos_y": 6,
     "inventory": [],
     "flags": {},
-    "inventory_size": 99
+    "inventory_size": 99,
+    "sprite": "rowan"
   },
   "arrows": ["⬅","⬆","⬇","➡", "❌", "⏺"],
   "timeout": 300,

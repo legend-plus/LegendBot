@@ -31,6 +31,10 @@ class EntityPacket(Packet):
             # TODO: NPC
             pass
             entity = Entity("entity", pos_x, pos_y, facing, sprite, interactable, entity_uuid)
+        elif entity_type == 2:
+            # TODO: Player
+            pass
+            entity = Entity("entity", pos_x, pos_y, facing, sprite, interactable, entity_uuid)
         else:
             entity = Entity("entity", pos_x, pos_y, facing, sprite, interactable, entity_uuid)
         return cls(entity, pos_x, pos_y)
@@ -43,6 +47,8 @@ class EntityPacket(Packet):
 
         if self.entity.entity_type == "npc":
             type_id = 1
+        elif self.entity.entity_type == "player":
+            type_id = 2
         else:
             type_id = 0
         output += struct.pack(">H", type_id)
