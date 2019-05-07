@@ -76,9 +76,9 @@ class Dialogue(Interaction):
         num_options = 0
         gui_description: str = ""
 
-        if hasattr(session, "config") and "arrows" in session.config:
+        if hasattr(session.legend, "config") and "arrows" in session.legend.config:
             for opt in self.options:
-                if num_options < len(session.config["arrows"]):
+                if num_options < len(session.legend.config["arrows"]):
                     add_option: bool = True
                     for requirement in opt.reqs:
                         if not requirement.validate(session.data["flags"]):
@@ -87,16 +87,16 @@ class Dialogue(Interaction):
                         session.gui_options.append(opt)
                         if num_options > 0:
                             gui_description += "\n"
-                        gui_description += session.config["arrows"][num_options] + " " + opt.text
+                        gui_description += session.legend.config["arrows"][num_options] + " " + opt.text
                         num_options += 1
         r = 0
         while self.text.find("%item") != -1:
-            self.text = self.text.replace("%item", "**[" + session.sprites["items"][self.items[r][0].get_sprite(session.base_items)] + " " + self.items[r][0].get_name(session.base_items) + "]**", 1)
+            self.text = self.text.replace("%item", "**[" + session.legend.sprites["items"][self.items[r][0].get_sprite(session.legend.base_items)] + " " + self.items[r][0].get_name(session.legend.base_items) + "]**", 1)
             r += 1
 
         for dialogue_item in self.items:
             if dialogue_item[1]:
-                session.data["inventory"].append(dialogue_item[0])
+                session.data["inventory"].add_item(dialogue_item[0])
 
         for flag in self.flags:
             flag.apply(session.data["flags"])

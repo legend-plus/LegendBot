@@ -14,6 +14,8 @@ from legendutils import View, ChatMessage, World
 import sprite_render
 from math import ceil, floor, modf
 
+from packets import InvalidateCachePacket
+
 overworld_modes: List[str] = ["world", "dialogue"]
 inventory_modes: List[str] = ["inventory", "inventory_context"]
 context_count: int = 3
@@ -133,6 +135,8 @@ class DiscordGame(Game):
                 author_text = self.legend.sprites["entities"][self.dialogue_buffer.sprite] + self.dialogue_buffer.author
                 message = self.dialogue_buffer.text
                 embed.add_field(name=author_text, value=message, inline=False)
+                #  if not self.gui_description or self.gui_description == "":
+                #    self.gui_description = "."
                 embed.add_field(name="Choose", value=self.gui_description, inline=False)
 
             if len(self.chat_buffer) > 0:
@@ -390,13 +394,19 @@ class DiscordGame(Game):
 
     async def disconnect(self, reason=None):
         if self.running:
+            from directgame import DirectGame
+            self.running = False
+            for game in self.legend.games.values():
+                if isinstance(game, DirectGame) and self.uuid in game.entity_cache:
+                    invalidate_cache_packet = InvalidateCachePacket(self.uuid)
+                    game.connection.send_packet(invalidate_cache_packet)
+                    game.entity_cache.remove(self.uuid)
             self.data["inventory"] = [vars(inv_item) for inv_item in self.data["inventory"].items]
             self.users.update_one({"user": str(self.author.id)}, {"$set": self.data})
             if not reason:
                 await self.msg.edit(content="❌ Disconnected", embed=None)
             else:
                 await self.msg.edit(content="❌ Disconnected for " + reason, embed=None)
-            self.running = False
             return self.author
         else:
             return False

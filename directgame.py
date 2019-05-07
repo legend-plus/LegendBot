@@ -2,7 +2,7 @@ import uuid
 from typing import Set
 
 from game import Game
-from packets import ReadyPacket, PlayerPositionPacket, DisconnectPacket, ChatPacket
+from packets import ReadyPacket, PlayerPositionPacket, DisconnectPacket, ChatPacket, InvalidateCachePacket
 
 
 class DirectGame(Game):
@@ -30,8 +30,12 @@ class DirectGame(Game):
         if self.running:
             self.data["inventory"] = [vars(inv_item) for inv_item in self.data["inventory"].items]
             self.legend.users.update_one({"user": str(self.user_id)}, {"$set": self.data})
-            self.running = False
         self.running = False
+        for game in self.legend.games.values():
+            if isinstance(game, DirectGame) and self.uuid in game.entity_cache:
+                invalidate_cache_packet = InvalidateCachePacket(self.uuid)
+                game.connection.send_packet(invalidate_cache_packet)
+                game.entity_cache.remove(self.uuid)
         if self.connection.running:
             disconnect_packet = DisconnectPacket(reason)
             self.connection.send_packet(disconnect_packet)

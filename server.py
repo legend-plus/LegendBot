@@ -14,6 +14,7 @@ import typing
 
 import packets
 from directgame import DirectGame
+from game import Game
 from legend import Legend
 from packets import Packet, PingPacket, PongPacket, LoginPacket, LoginResultPacket, JoinGamePacket, RequestWorldPacket, \
     WorldPacket, ReadyPacket, MovePacket, PlayerPositionPacket, MoveAndFacePacket, SendMessagePacket, EntityPacket
@@ -169,10 +170,11 @@ class Server(asyncore.dispatcher):
                                 entity = self.legend.entities[pos]
                                 if entity.uuid not in game.entity_cache:
                                     # Send entity information
-                                    entity_packet = EntityPacket(entity, x, y)
-                                    game.connection.send_packet(entity_packet)
-                                    game.entity_cache.add(entity.uuid)
-                                    pass
+                                    if not isinstance(entity, Game) or entity.running:
+                                        entity_packet = EntityPacket(entity, x, y)
+                                        game.connection.send_packet(entity_packet)
+                                        game.entity_cache.add(entity.uuid)
+                                        pass
                                 else:
                                     # Entities don't change often (Outside battle), so we don't need to spam
                                     # The client with their positions every tick
@@ -184,7 +186,8 @@ class Server(asyncore.dispatcher):
                                 game.data["pos_x"] + self.legend.config["entity_radius"] and \
                                 game.data["pos_y"] - self.legend.config["entity_radius"] < other_game.data["pos_y"] < \
                                 game.data["pos_y"] + self.legend.config["entity_radius"]:
-                            if other_game != game and other_game.uuid not in game.entity_cache:
+                            if other_game != game and other_game.uuid not in game.entity_cache and other_game.running:
+                                print("Found other game, " + str(other_game.uuid) + " running = " + str(other_game.running))
                                 entity_packet = EntityPacket(other_game, other_game.data["pos_x"],
                                                              other_game.data["pos_y"])
                                 game.connection.send_packet(entity_packet)
